@@ -4,7 +4,7 @@ GROUP_CHAT_ID= -71540273136133
 politika_url = "https://docs.google.com/document/d/1fdp8o-97d2-n9YcBZuFFeX8s_8veytQpeMI_Nbex6GQ/edit?usp=sharing"
 
 start_text = """Давайте знакомиться! 
-Я Андрей DOC — ваш персональный медицинский нейропомощник.
+Я Челик — ваш персональный медицинский нейропомощник.
 Подскажите, как я могу к вам обращаться?
 """
 second_text = """{user_name}, приятно познакомиться! Ваш номер ID {user_id}.

@@ -10,7 +10,7 @@ from typing import Dict, Any
 
 db_path='dialogs.db'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # на уровень выше папки db
-CREDS_PATH = os.path.join(BASE_DIR, "docs", "anamnez-bot-fd6467c32f62.json")
+CREDS_PATH = os.path.join(BASE_DIR, "docs", "anamnez-max-a04dd6899274.json")
 
 async def init_db():
         async with aiosqlite.connect(db_path) as db:
@@ -106,7 +106,7 @@ async def init_db():
 
 # ==== Настройки Google API ====
 SCOPE = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-SPREADSHEET_NAME = "anamnez_db"  # Имя файла в Google Sheets
+SPREADSHEET_NAME = "anamnez_db_max"  # Имя файла в Google Sheets
 
 
 # ==== Подключение к Google Sheets ====

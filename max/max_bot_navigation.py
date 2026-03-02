@@ -61,15 +61,20 @@ async def bot_started(event: BotStarted):
 
         # Отправляем фото с текстом
 
-    with open(image_path, "rb") as image_file:
-        buffer = image_file.read()  # читаем весь файл в память
-        media = InputMediaBuffer(buffer=buffer, filename="image_andrey.jpg", type=UploadType.IMAGE)
+    # with open(image_path, "rb") as image_file:
+    #     buffer = image_file.read()  # читаем весь файл в память
+    #     media = InputMediaBuffer(buffer=buffer, filename="image_andrey.jpg", type=UploadType.IMAGE)
+    #
+    #     await event.bot.send_message(
+    #         chat_id = chat_id,
+    #         text=resources.start_text,
+    #         attachments=[media]
+    #         )
 
-        await event.bot.send_message(
-            chat_id = chat_id,
-            text=resources.start_text,
-            attachments=[media]
-            )
+    await event.bot.send_message(
+        chat_id=chat_id,
+        text=resources.start_text
+    )
 
         # Переходим к следующему состоянию
     await dialogs_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
@@ -98,14 +103,18 @@ async def start(event: MessageCreated):
             manager_msg_id=resources.STATES_USERS_FINALS['start']
         )
 
-        with open(image_path, "rb") as image_file:
-            buffer = image_file.read()  # читаем весь файл в память
-            media = InputMediaBuffer(buffer=buffer, filename="image_andrey.jpg", type= UploadType.IMAGE)
+        # with open(image_path, "rb") as image_file:
+        #     buffer = image_file.read()  # читаем весь файл в память
+        #     media = InputMediaBuffer(buffer=buffer, filename="image_andrey.jpg", type= UploadType.IMAGE)
+        #
+        #     await event.message.answer(
+        #         text=resources.start_text,
+        #         attachments=[media]
+        #     )
 
-            await event.message.answer(
-                text=resources.start_text,
-                attachments=[media]
-            )
+        await event.message.answer(
+            text=resources.start_text,
+        )
 
         await dialogs_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
         return
