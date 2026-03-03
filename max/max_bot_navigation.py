@@ -207,12 +207,21 @@ async def name_dialog(event: MessageCreated):
     text = event.message.body.text
     name = util_fins.normalize_name(text)
 
-    await dialogs_db.add_user(
-        user_id=user_id,
-        name=name,
-        from_manager=user["from_manager"],
-        register_date=user["register_date"],
-    )
+    if user is None:
+        await dialogs_db.add_user(
+            user_id=user_id,
+            name= "default",
+            from_manager= "base_url",
+        )
+    else:
+        await dialogs_db.add_user(
+            user_id=user_id,
+            name=name,
+            from_manager=user["from_manager"],
+            register_date=user["register_date"],
+        )
+
+
     await dialogs_db.set_dialog_state(user_id, resources.dialog_states_dict["anketa"])
 
     answer = resources.second_text.format(user_name=name, user_id=user_id)

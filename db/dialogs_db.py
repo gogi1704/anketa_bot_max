@@ -57,7 +57,7 @@ async def init_db():
 
             await db.execute("""
                         CREATE TABLE IF NOT EXISTS message_links (
-                            group_message_id INTEGER PRIMARY KEY,
+                            group_message_id TEXT PRIMARY KEY,
                             user_id INTEGER NOT NULL
                         )
                     """)
@@ -215,7 +215,7 @@ async def sync_from_google_sheets():
         for r in rows:
             user_id, position, answers, mode = r
             await db.execute(
-                "INSERT INTO reminders (user_id, position , answers, mode ) VALUES (?, ?, ?, ?)",
+                "INSERT INTO anketa_state (user_id, position , answers, mode ) VALUES (?, ?, ?, ?)",
                 (int(user_id), position, answers, mode)
             )
 
@@ -640,7 +640,7 @@ async def save_message_link(group_msg_id: int, user_id: int):
         """, (group_msg_id, user_id))
         await db.commit()
 
-async def get_user_id_by_group_message(group_msg_id: int):
+async def get_user_id_by_group_message(group_msg_id: str):
     async with aiosqlite.connect(db_path) as db:
         cursor = await db.execute("SELECT user_id FROM message_links WHERE group_message_id = ?", (group_msg_id,))
         row = await cursor.fetchone()

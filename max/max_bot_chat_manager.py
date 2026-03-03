@@ -56,7 +56,7 @@ async def handle_manager_reply(event:MessageCreated):
     if linked_message:
         group_message_id = linked_message.message.seq
 
-        user_id = await get_user_id_by_group_message(group_message_id)
+        user_id = await get_user_id_by_group_message(str(group_message_id))
 
         if user_id:
             builder = InlineKeyboardBuilder()
