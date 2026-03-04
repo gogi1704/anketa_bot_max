@@ -1,9 +1,7 @@
 import os
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
-from db import dialogs_db as db
-
-
+from db.anamnez import anamnez_db as db
 
 load_dotenv()
 

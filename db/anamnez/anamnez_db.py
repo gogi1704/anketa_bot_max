@@ -8,7 +8,7 @@ import json
 from typing import Dict, Any
 
 
-db_path='dialogs.db'
+db_path='anamnez.db'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # на уровень выше папки db
 CREDS_PATH = os.path.join(BASE_DIR, "docs", "anamnez-max-a04dd6899274.json")
 

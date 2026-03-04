@@ -1,26 +1,16 @@
 import os
-import asyncio
 import logging
-import datetime
 from dotenv import load_dotenv
-from db.dialogs_db import  periodic_sync
-from max.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
+from db.after_tests import after_tests_db
+from max.max_bot_anamnez.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from utils.util_fins import context_manager
 
-from maxapi import Bot, Dispatcher
+from maxapi import Dispatcher
 from maxapi.types import (
-    MessageCreated,
-    MessageCallback,
-    Command, BotCommand, BotStarted,
-)
+    Command, BotCommand, )
 
 
-from max.max_bot_navigation import *
-# from tg.tg_bot_util_handlers import update_db
-# from tg.tg_manager_chat_handlers import *
-# from tg.tg_bot_channel_funs import *
-# from tg.tg_error_handlers import error_handler
-from db import dialogs_db
+from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
 
 load_dotenv()
@@ -34,67 +24,7 @@ dp = Dispatcher()
 
 
 
-async def handle_consent(event: MessageCallback, payload: str):
-    chat_id, user_id = event.get_ids()
 
-    user_data = await dialogs_db.get_user(user_id=user_id)
-
-    if payload == "consent_yes":
-        await dialogs_db.set_dialog_state(
-            user_id,
-            resources.dialog_states_dict["get_number"]
-        )
-
-        await dialogs_db.add_user(
-            user_id=user_id,
-            name=user_data['name'],
-            is_medosomotr=user_data['is_medosomotr'],
-            phone=user_data["phone"],
-            register_date=user_data['register_date'],
-            from_manager="from_manager",
-            privacy_policy_date=datetime.datetime.now(datetime.UTC),
-        )
-
-        await dialogs_db.append_answer(
-            telegram_id=user_id,
-            text=f"Менеджер сказал: {resources.get_number_text}"
-        )
-
-        await event.bot.send_message(
-            chat_id=chat_id,
-            text=resources.privacy_policy_true
-        )
-
-        await event.bot.send_message(
-            chat_id=chat_id,
-            text=resources.get_number_text
-        )
-
-    elif payload == "consent_no":
-        await dialogs_db.set_dialog_state(
-            user_id,
-            resources.dialog_states_dict["new_state"]
-        )
-
-        await dialogs_db.add_user(
-            user_id=user_id,
-            name=user_data['name'],
-            is_medosomotr=user_data['is_medosomotr'],
-            phone=user_data["phone"],
-            register_date=user_data['register_date'],
-            from_manager="from_manager",
-            privacy_policy_date=datetime.datetime.now(datetime.UTC),
-        )
-
-        await event.bot.send_message(
-            chat_id=chat_id,
-            text=resources.privacy_policy_false
-        )
-
-        await event.bot.send_message(
-            chat_id=chat_id,
-            text="Спасибо за ответы. До встречи на медосмотре!"
-        )
 
 
 @dp.message_callback()
@@ -129,10 +59,6 @@ async def callback_router(event: MessageCallback):
         await handle_reply_button_pressed(event)
         return
 
-# =============================
-# COMMANDS
-# =============================
-
 @dp.bot_started()
 async def bot_started_handler(event: BotStarted):
     await bot_started(event)
@@ -151,15 +77,6 @@ async def start_handler(event: MessageCreated):
 async def clear_handler(event: MessageCreated):
     await clear_all(event, bot)
 
-
-# @dp.message_created(Command("stop_privacy"))
-# async def stop_privacy_handler(event: MessageCreated):
-#     await stop_privacy(event)
-
-
-# =============================
-# TEXT HANDLER
-# =============================
 
 @dp.message_created()
 async def text_handler(event: MessageCreated):
@@ -180,13 +97,12 @@ async def text_handler(event: MessageCreated):
     await handle_text_message(event)
 
 
-# =============================
-# MAIN
-# =============================
-
 async def main():
-    await dialogs_db.init_db()
-    asyncio.create_task(periodic_sync())
+    await anamnez_db.init_db()
+    await after_tests_db.init_db()
+
+    asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
+    asyncio.create_task(anamnez_db.periodic_sync())
 
     # прогрев GPT
     await get_gpt_answer("test", "test", bot=bot)

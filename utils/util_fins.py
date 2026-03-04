@@ -1,6 +1,5 @@
 import random
 from utils.anketa_utils import *
-from db import dialogs_db
 from maxapi.context import MemoryContext
 
 

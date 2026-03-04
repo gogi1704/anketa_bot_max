@@ -1,24 +1,23 @@
 from pathlib import Path
 from typing import Any
-
+import datetime
 from maxapi import Bot
 from maxapi.context import MemoryContext
 from maxapi.enums.sender_action import SenderAction
-from maxapi.types import InputMediaBuffer, BotStarted
-from maxapi.enums.upload_type import UploadType
-from maxapi.types import MessageCreated, CallbackButton, MessageCallback
-from db import dialogs_db
+from maxapi.types import BotStarted
+from maxapi.types import MessageCreated, MessageCallback
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-from max.max_bot_channel_invite import send_channel_invite
-from max.max_bot_chat_manager import send_to_chat
+from max.max_bot_anamnez.max_bot_channel_invite import send_channel_invite
+from max.max_bot_anamnez.max_bot_chat_manager import send_to_chat
 from utils import util_fins
 import asyncio
 from ai_agents.open_ai_main import get_gpt_answer
 from ai_agents import ai_utils
 from utils.anketa_utils import *
 from maxapi.types.attachments.buttons import MessageButton, CallbackButton
-from max import max_bot_chat_manager
+from max.max_bot_anamnez import max_bot_chat_manager
+from db.anamnez import anamnez_db
 
 BACK_BUTTON = "⬅️ Назад"
 image_path = Path(__file__).parent.parent / "images" / "image_andrey.jpg"
@@ -33,10 +32,10 @@ async def clear_all(event: MessageCreated, bot: Bot):
         action= SenderAction.TYPING_ON
     )
 
-    await dialogs_db.delete_dialog(user_id)
-    await dialogs_db.delete_user(user_id)
-    await dialogs_db.delete_user_reply_state(user_id)
-    await dialogs_db.delete_anketa(user_id)
+    await anamnez_db.delete_dialog(user_id)
+    await anamnez_db.delete_user(user_id)
+    await anamnez_db.delete_user_reply_state(user_id)
+    await anamnez_db.delete_anketa(user_id)
 
     # Перезапускаем стартовый сценарий
     await start(event)
@@ -47,14 +46,14 @@ async def bot_started(event: BotStarted):
 
     # === 1. Новый пользователь ===
     ref_code = args if args else "base_url"
-    await dialogs_db.add_user(user_id, name="", from_manager=ref_code)
+    await anamnez_db.add_user(user_id, name="", from_manager=ref_code)
 
-    await dialogs_db.append_answer(
+    await anamnez_db.append_answer(
         telegram_id=user_id,
         text=f"Терапевт сказал: {resources.start_text}\n"
         )
 
-    await dialogs_db.save_user_reply_state(
+    await anamnez_db.save_user_reply_state(
         user_id,
         manager_msg_id=resources.STATES_USERS_FINALS['start']
         )
@@ -77,7 +76,7 @@ async def bot_started(event: BotStarted):
     )
 
         # Переходим к следующему состоянию
-    await dialogs_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
+    await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
     return
 
 
@@ -86,19 +85,19 @@ async def start(event: MessageCreated):
     chat_id, user_id = event.get_ids()
 
     # Получаем пользователя
-    user = await dialogs_db.get_user(user_id)
+    user = await anamnez_db.get_user(user_id)
 
     # Получаем анкету пользователя
-    anketa = await dialogs_db.get_anketa(user_id=user_id)
+    anketa = await anamnez_db.get_anketa(user_id=user_id)
 
     if anketa is None:
         # Если анкета не найдена — отправляем стартовое сообщение
-        await dialogs_db.append_answer(
+        await anamnez_db.append_answer(
             telegram_id=user_id,
             text=f"Терапевт сказал: {resources.start_text}\n"
         )
 
-        await dialogs_db.save_user_reply_state(
+        await anamnez_db.save_user_reply_state(
             user_id,
             manager_msg_id=resources.STATES_USERS_FINALS['start']
         )
@@ -116,7 +115,7 @@ async def start(event: MessageCreated):
             text=resources.start_text,
         )
 
-        await dialogs_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
+        await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
         return
 
     # === 3. Пользователь с анкетой ===
@@ -144,13 +143,13 @@ async def handle_text_message(event: MessageCreated):
         action=SenderAction.TYPING_ON
     )
 
-    await dialogs_db.append_answer(telegram_id=user_id, text=f"Пациент сказал:{text}\n")
-    state = await dialogs_db.get_dialog_state(user_id)
+    await anamnez_db.append_answer(telegram_id=user_id, text=f"Пациент сказал:{text}\n")
+    state = await anamnez_db.get_dialog_state(user_id)
 
-    manager_msg_id = await dialogs_db.get_user_answer_state(user_id)
+    manager_msg_id = await anamnez_db.get_user_answer_state(user_id)
     if manager_msg_id is not None:
         # Ответ менеджеру → очищаем состояние
-        await dialogs_db.delete_user_answer_state(user_id)
+        await anamnez_db.delete_user_answer_state(user_id)
 
         # Отправляем сообщение в группу менеджеров
         await max_bot_chat_manager.send_to_chat(
@@ -188,8 +187,8 @@ async def handle_text_message(event: MessageCreated):
     #     await get_number_dialog(event)
 
     elif state == resources.dialog_states_dict['new_state']:
-        user = await dialogs_db.get_user(user_id)
-        anketa = await dialogs_db.get_anketa(user_id=user_id)
+        user = await anamnez_db.get_user(user_id)
+        anketa = await anamnez_db.get_anketa(user_id=user_id)
         name = user["name"]
         date = anketa["osmotr_date"]
 
@@ -203,18 +202,18 @@ async def name_dialog(event: MessageCreated):
     chat_id, user_id = event.get_ids()
     await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
 
-    user = await dialogs_db.get_user(user_id)
+    user = await anamnez_db.get_user(user_id)
     text = event.message.body.text
     name = util_fins.normalize_name(text)
 
     if user is None:
-        await dialogs_db.add_user(
+        await anamnez_db.add_user(
             user_id=user_id,
             name= "default",
             from_manager= "base_url",
         )
     else:
-        await dialogs_db.add_user(
+        await anamnez_db.add_user(
             user_id=user_id,
             name=name,
             from_manager=user["from_manager"],
@@ -222,7 +221,7 @@ async def name_dialog(event: MessageCreated):
         )
 
 
-    await dialogs_db.set_dialog_state(user_id, resources.dialog_states_dict["anketa"])
+    await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["anketa"])
 
     answer = resources.second_text.format(user_name=name, user_id=user_id)
     msg = await event.message.answer(text=answer)
@@ -237,14 +236,14 @@ async def start_anketa(event: MessageCreated):
     chat_id, user_id = event.get_ids()
 
     # 1️⃣ Сбрасываем состояние анкеты в БД
-    await dialogs_db.set_user_state(user_id, {
+    await anamnez_db.set_user_state(user_id, {
         "position": 0,
         "answers": [],
         "mode": "anketa_osmotr"
     })
 
     # 2️⃣ Устанавливаем общий dialog_state (если ты его используешь)
-    await dialogs_db.set_dialog_state(
+    await anamnez_db.set_dialog_state(
         user_id,
         resources.dialog_states_dict["anketa"]
     )
@@ -266,7 +265,7 @@ async def anketa_dialog(event: MessageCreated):
     )
 
     # Получаем состояние из БД
-    state = await dialogs_db.get_user_state(user_id)
+    state = await anamnez_db.get_user_state(user_id)
     pos = state["position"]
     answers = state["answers"]
     mode = state["mode"]
@@ -286,7 +285,7 @@ async def anketa_dialog(event: MessageCreated):
             if answers:
                 answers.pop()
 
-            await dialogs_db.set_user_state(user_id, {
+            await anamnez_db.set_user_state(user_id, {
                 "position": pos,
                 "answers": answers,
                 "mode": mode
@@ -331,7 +330,7 @@ async def anketa_dialog(event: MessageCreated):
 
     # ===== ЕЩЁ ЕСТЬ ВОПРОСЫ =====
     if pos < len(questions):
-        await dialogs_db.set_user_state(user_id, {
+        await anamnez_db.set_user_state(user_id, {
             "position": pos,
             "answers": answers,
             "mode": mode
@@ -343,13 +342,13 @@ async def anketa_dialog(event: MessageCreated):
     # ===== АНКЕТА ЗАВЕРШЕНА =====
 
     # Сохраняем финальное состояние
-    await dialogs_db.set_user_state(user_id, {
+    await anamnez_db.set_user_state(user_id, {
         "position": pos,
         "answers": answers,
         "mode": None
     })
 
-    await dialogs_db.save_user_reply_state(
+    await anamnez_db.save_user_reply_state(
         user_id,
         manager_msg_id=resources.STATES_USERS_FINALS['final_anketa']
     )
@@ -413,12 +412,12 @@ async def anketa_dialog(event: MessageCreated):
 
         # ===== ЕСЛИ РЕКОМЕНДАЦИЙ НЕТ =====
         else:
-            await dialogs_db.append_answer(
+            await anamnez_db.append_answer(
                 telegram_id=user_id,
                 text=f"Терапевт сказал:{resources.is_has_complaint_text}"
             )
 
-            await dialogs_db.set_dialog_state(
+            await anamnez_db.set_dialog_state(
                 user_id,
                 resources.dialog_states_dict["is_has_complaint"]
             )
@@ -452,7 +451,7 @@ async def ask_question(event: MessageCreated, pos: int, questions: list[str]):
     text = questions[pos]
 
     # Логируем в историю диалога
-    await dialogs_db.append_answer(
+    await anamnez_db.append_answer(
         telegram_id=user_id,
         text=f"Терапевт сказал:{text}\n"
     )
@@ -519,7 +518,7 @@ async def add_to_anketa(event: MessageCreated, answers: list[Any]):
     chat_id, user_id = event.get_ids()
 
     # Получаем mode из состояния БД
-    state = await dialogs_db.get_user_state(user_id)
+    state = await anamnez_db.get_user_state(user_id)
     mode = state.get("mode")
 
     # Безопасность: проверка длины анкеты
@@ -528,7 +527,7 @@ async def add_to_anketa(event: MessageCreated, answers: list[Any]):
 
     # В текущем коде обе ветки одинаковые.
     # Если позже появится различие — логика уже готова.
-    await dialogs_db.add_or_update_anketa(
+    await anamnez_db.add_or_update_anketa(
         user_id=user_id,
         organization_or_inn=answers[0],
         osmotr_date=answers[1],
@@ -552,7 +551,7 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
 
     if payload == "dop_yes":
 
-        await dialogs_db.save_user_reply_state(
+        await anamnez_db.save_user_reply_state(
             user_id,
             manager_msg_id=resources.STATES_USERS_FINALS["dop_true"]
         )
@@ -561,12 +560,12 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
 
     elif payload == "dop_no":
 
-        await dialogs_db.save_user_reply_state(
+        await anamnez_db.save_user_reply_state(
             user_id,
             manager_msg_id=resources.STATES_USERS_FINALS["dop_false"]
         )
 
-        await dialogs_db.set_dialog_state(
+        await anamnez_db.set_dialog_state(
             user_id,
             resources.dialog_states_dict["new_state"]
         )
@@ -587,7 +586,7 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
                 payload="dopDop_no"
             ))
 
-        anketa = await dialogs_db.get_anketa(user_id=user_id)
+        anketa = await anamnez_db.get_anketa(user_id=user_id)
         date = anketa.get("osmotr_date")
 
         await event.bot.send_message(
@@ -611,7 +610,7 @@ async def handle_dopDop_analizy(event:MessageCallback, context_data: MemoryConte
 
     if payload == "dopDop_yes":
 
-        await dialogs_db.save_user_reply_state(
+        await anamnez_db.save_user_reply_state(
             user_id,
             manager_msg_id=resources.STATES_USERS_FINALS["dop_dop_true"]
         )
@@ -620,17 +619,17 @@ async def handle_dopDop_analizy(event:MessageCallback, context_data: MemoryConte
 
     elif payload == "dopDop_no":
 
-        await dialogs_db.save_user_reply_state(
+        await anamnez_db.save_user_reply_state(
             user_id,
             manager_msg_id=resources.STATES_USERS_FINALS["dop_dop_false"]
         )
 
-        await dialogs_db.set_dialog_state(
+        await anamnez_db.set_dialog_state(
             user_id,
             resources.dialog_states_dict["new_state"]
         )
 
-        anketa = await dialogs_db.get_anketa(user_id=user_id)
+        anketa = await anamnez_db.get_anketa(user_id=user_id)
         date = anketa["osmotr_date"]
 
         await event.bot.send_message(
@@ -741,11 +740,11 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         chat_id,user_id = event.get_ids()
 
         # получаем данные из БД (они постоянные)
-        user_data = await dialogs_db.get_user(user_id=user_id)
-        anketa = await dialogs_db.get_anketa(user_id=user_id)
+        user_data = await anamnez_db.get_user(user_id=user_id)
+        anketa = await anamnez_db.get_anketa(user_id=user_id)
 
         # сохраняем финальный выбор в БД
-        await dialogs_db.add_user(
+        await anamnez_db.add_user(
             user_id=user_id,
             name=user_data['name'],
             is_medosomotr=user_data['is_medosomotr'],
@@ -772,7 +771,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         except Exception as e:
             print(f"Ошибка удаления сообщения: {e}")
 
-        await dialogs_db.set_dialog_state(
+        await anamnez_db.set_dialog_state(
             user_id,
             resources.dialog_states_dict["new_state"]
         )
@@ -782,7 +781,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             tests_price=resources.TESTS_PRICE
         )
 
-        await dialogs_db.save_user_reply_state(
+        await anamnez_db.save_user_reply_state(
             user_id,
             manager_msg_id=resources.STATES_USERS_FINALS['victory']
         )
@@ -800,3 +799,65 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         await send_channel_invite(event)
 
         await context_data.clear()
+
+async def handle_consent(event: MessageCallback, payload: str):
+    chat_id, user_id = event.get_ids()
+
+    user_data = await anamnez_db.get_user(user_id=user_id)
+
+    if payload == "consent_yes":
+        await anamnez_db.set_dialog_state(
+            user_id,
+            resources.dialog_states_dict["get_number"]
+        )
+
+        await anamnez_db.add_user(
+            user_id=user_id,
+            name=user_data['name'],
+            is_medosomotr=user_data['is_medosomotr'],
+            phone=user_data["phone"],
+            register_date=user_data['register_date'],
+            from_manager="from_manager",
+            privacy_policy_date=datetime.datetime.now(datetime.UTC),
+        )
+
+        await anamnez_db.append_answer(
+            telegram_id=user_id,
+            text=f"Менеджер сказал: {resources.get_number_text}"
+        )
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.privacy_policy_true
+        )
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.get_number_text
+        )
+
+    elif payload == "consent_no":
+        await anamnez_db.set_dialog_state(
+            user_id,
+            resources.dialog_states_dict["new_state"]
+        )
+
+        await anamnez_db.add_user(
+            user_id=user_id,
+            name=user_data['name'],
+            is_medosomotr=user_data['is_medosomotr'],
+            phone=user_data["phone"],
+            register_date=user_data['register_date'],
+            from_manager="from_manager",
+            privacy_policy_date=datetime.datetime.now(datetime.UTC),
+        )
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.privacy_policy_false
+        )
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text="Спасибо за ответы. До встречи на медосмотре!"
+        )
