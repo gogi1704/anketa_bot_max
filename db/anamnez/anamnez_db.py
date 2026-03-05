@@ -9,8 +9,10 @@ from typing import Dict, Any
 
 
 db_path='anamnez.db'
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # на уровень выше папки db
-CREDS_PATH = os.path.join(BASE_DIR, "docs", "anamnez-max-a04dd6899274.json")
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+CREDS_PATH = BASE_DIR / "docs" / "anamnez-max-a04dd6899274.json"
 
 async def init_db():
         async with aiosqlite.connect(db_path) as db:

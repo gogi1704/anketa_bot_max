@@ -7,8 +7,10 @@ import os
 from typing import Optional
 
 db_path = 'after_tests.db'
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # на уровень выше папки db
-CREDS_PATH = os.path.join(BASE_DIR, "docs", "after-tests-db-e0cd34372c4a.json")
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+CREDS_PATH = BASE_DIR / "docs" / "after-tests-db-e0cd34372c4a.json"
 
 # ==== Настройки Google API ====
 SCOPE = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -96,14 +98,14 @@ def get_sheet():
     client = gspread.authorize(creds)
     sheet = client.open(SPREADSHEET_NAME)
     return {
-        "neuro_bot_dialogs": sheet.worksheet("neuro_bot_dialogs"),
-        "neuro_dialog_states": sheet.worksheet("neuro_dialog_states"),
+        "users_max": sheet.worksheet("users_max"),
+        "neuro_dialog_states_max": sheet.worksheet("neuro_dialog_states_max"),
         "api_keys": sheet.worksheet("api_keys"),
-        "neuro_message_links": sheet.worksheet("neuro_message_links"),
+        "neuro_message_links_max": sheet.worksheet("neuro_message_links_max"),
         "neuro_user_reply_state": sheet.worksheet("neuro_user_reply_state"),
         "neuro_user_answer_state": sheet.worksheet("neuro_user_answer_state"),
         "tests_and_results": sheet.worksheet("tests_and_results"),
-        "pending_notifications": sheet.worksheet("pending_notifications"),  # ✅ NEW
+        "pending_notifications_max": sheet.worksheet("pending_notifications_max"),  # ✅ NEW
     }
 
 
@@ -124,19 +126,19 @@ async def sync_from_google_sheets():
 
     async with aiosqlite.connect(db_path) as db:
         # Очистка таблиц (как у тебя)
-        await db.execute("DELETE FROM neuro_bot_dialogs")
-        await db.execute("DELETE FROM neuro_dialog_states")
+        await db.execute("DELETE FROM users_max")
+        await db.execute("DELETE FROM neuro_dialog_states_max")
         await db.execute("DELETE FROM api_keys")
-        await db.execute("DELETE FROM neuro_message_links")
+        await db.execute("DELETE FROM neuro_message_links_max")
         await db.execute("DELETE FROM neuro_user_reply_state")
         await db.execute("DELETE FROM neuro_user_answer_state")
         await db.execute("DELETE FROM tests_and_results")
-        await db.execute("DELETE FROM pending_notifications")  # ✅ NEW
+        await db.execute("DELETE FROM pending_notifications_max")  # ✅ NEW
 
         # ---------------------------
         # neuro_bot_dialogs
         # ---------------------------
-        rows = sheets["neuro_bot_dialogs"].get_all_values()[1:]
+        rows = sheets["users_max"].get_all_values()[1:]
         for r in rows:
             # ожидаем 7 колонок
             if not r or len(r) < 7:
@@ -149,7 +151,7 @@ async def sync_from_google_sheets():
 
             await db.execute(
                 """
-                INSERT INTO neuro_bot_dialogs
+                INSERT INTO users_max
                 (telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager)
                 VALUES (?,?,?,?,?,?,?)
                 """,
@@ -159,7 +161,7 @@ async def sync_from_google_sheets():
         # ---------------------------
         # neuro_dialog_states
         # ---------------------------
-        rows = sheets["neuro_dialog_states"].get_all_values()[1:]
+        rows = sheets["neuro_dialog_states_max"].get_all_values()[1:]
         for r in rows:
             if not r or len(r) < 2:
                 continue
@@ -168,14 +170,14 @@ async def sync_from_google_sheets():
             if uid is None:
                 continue
             await db.execute(
-                "INSERT INTO neuro_dialog_states (user_id, dialog_state) VALUES (?, ?)",
+                "INSERT INTO neuro_dialog_states_max (user_id, dialog_state) VALUES (?, ?)",
                 (uid, dialog_state)
             )
 
         # ---------------------------
         # neuro_message_links
         # ---------------------------
-        rows = sheets["neuro_message_links"].get_all_values()[1:]
+        rows = sheets["neuro_message_links_max"].get_all_values()[1:]
         for r in rows:
             if not r or len(r) < 2:
                 continue
@@ -185,7 +187,7 @@ async def sync_from_google_sheets():
             if uid is None or gmid is None:
                 continue
             await db.execute(
-                "INSERT INTO neuro_message_links (group_message_id, user_id) VALUES (?, ?)",
+                "INSERT INTO neuro_message_links_max (group_message_id, user_id) VALUES (?, ?)",
                 (gmid, uid)
             )
 
@@ -240,7 +242,7 @@ async def sync_from_google_sheets():
         # ---------------------------
         # pending_notifications  ✅ NEW
         # ---------------------------
-        rows = sheets["pending_notifications"].get_all_values()[1:]
+        rows = sheets["pending_notifications_max"].get_all_values()[1:]
         for r in rows:
             if not r or len(r) < 6:
                 continue
@@ -263,7 +265,7 @@ async def sync_from_google_sheets():
             if rid is not None:
                 await db.execute(
                     """
-                    INSERT INTO pending_notifications (id, med_id, telegram_id, chat_id, kind, created_at)
+                    INSERT INTO pending_notifications_max (id, med_id, telegram_id, chat_id, kind, created_at)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (rid, mid, tid, cid, kind, created_at)
@@ -271,7 +273,7 @@ async def sync_from_google_sheets():
             else:
                 await db.execute(
                     """
-                    INSERT INTO pending_notifications (med_id, telegram_id, chat_id, kind, created_at)
+                    INSERT INTO pending_notifications_max (med_id, telegram_id, chat_id, kind, created_at)
                     VALUES (?, ?, ?, ?, ?)
                     """,
                     (mid, tid, cid, kind, created_at)
@@ -309,20 +311,20 @@ async def sync_to_google_sheets():
         # ---------------------------
         # neuro_dialog_states
         # ---------------------------
-        async with db.execute("SELECT user_id, dialog_state FROM neuro_dialog_states") as cur:
+        async with db.execute("SELECT user_id, dialog_state FROM neuro_dialog_states_max") as cur:
             rows = await cur.fetchall()
-        sheets["neuro_dialog_states"].clear()
-        sheets["neuro_dialog_states"].update("A1", [["user_id", "dialog_state"]] + rows)
+        sheets["neuro_dialog_states_max"].clear()
+        sheets["neuro_dialog_states_max"].update("A1", [["user_id", "dialog_state"]] + rows)
 
         # ---------------------------
         # neuro_bot_dialogs
         # ---------------------------
         async with db.execute(
-            "SELECT telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager FROM neuro_bot_dialogs"
+            "SELECT telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager FROM users_max"
         ) as cur:
             rows = await cur.fetchall()
-        sheets["neuro_bot_dialogs"].clear()
-        sheets["neuro_bot_dialogs"].update(
+        sheets["users_max"].clear()
+        sheets["users_max"].update(
             "A1",
             [["telegram_id", "user_name", "dialog_text", "updated_at", "med_id", "user_state, from_manager"]] + rows
         )
@@ -345,10 +347,10 @@ async def sync_to_google_sheets():
         # ---------------------------
         # neuro_message_links
         # ---------------------------
-        async with db.execute("SELECT group_message_id, user_id FROM neuro_message_links") as cur:
+        async with db.execute("SELECT group_message_id, user_id FROM neuro_message_links_max") as cur:
             rows = await cur.fetchall()
-        sheets["neuro_message_links"].clear()
-        sheets["neuro_message_links"].update("A1", [["group_message_id", "user_id"]] + rows)
+        sheets["neuro_message_links_max"].clear()
+        sheets["neuro_message_links_max"].update("A1", [["group_message_id", "user_id"]] + rows)
 
         # ---------------------------
         # neuro_user_reply_state
@@ -382,18 +384,18 @@ async def sync_to_google_sheets():
         # ---------------------------
         async with db.execute("""
             SELECT id, med_id, telegram_id, chat_id, kind, created_at
-            FROM pending_notifications
+            FROM pending_notifications_max
             ORDER BY id ASC
         """) as cur:
             rows = await cur.fetchall()
 
-        sheets["pending_notifications"].clear()
-        sheets["pending_notifications"].update(
+        sheets["pending_notifications_max"].clear()
+        sheets["pending_notifications_max"].update(
             "A1",
             [["id", "med_id", "telegram_id", "chat_id", "kind", "created_at"]] + rows
         )
 
-        print("[✅] Данные из SQLite выгружены в Google Sheets (включая pending_notifications)")
+        print("[✅] Данные из SQLite выгружены в Google Sheets (включая pending_notifications_max)")
 
 
 
@@ -403,7 +405,7 @@ async def periodic_sync(interval: int = 3600):
         await asyncio.sleep(interval)
         try:
             await sync_to_google_sheets()
-            print(f"Успешная синхронизация.")
+            print(f"Успешная синхронизация After_Tests.")
         except Exception as e:
             print(f"Ошибка при синхронизации в Google Sheets: {e}")
 
@@ -417,10 +419,10 @@ async def append_answer(telegram_id: int, role: str, text: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            INSERT INTO neuro_bot_dialogs (telegram_id, dialog_text, updated_at)
+            INSERT INTO users_max (telegram_id, dialog_text, updated_at)
             VALUES (?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(telegram_id) DO UPDATE SET
-                dialog_text = COALESCE(neuro_bot_dialogs.dialog_text, '') || excluded.dialog_text,
+                dialog_text = COALESCE(users_max.dialog_text, '') || excluded.dialog_text,
                 updated_at = CURRENT_TIMESTAMP
             """,
             (telegram_id, new_entry)
@@ -432,7 +434,7 @@ async def create_dialog_user_with_med_id(telegram_id: int, med_id: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            INSERT INTO neuro_bot_dialogs (telegram_id, med_id)
+            INSERT INTO users_max (telegram_id, med_id)
             VALUES (?, ?)
             ON CONFLICT(telegram_id)
             DO UPDATE SET
@@ -446,7 +448,7 @@ async def create_dialog_user_with_med_id(telegram_id: int, med_id: str):
 async def get_dialog(telegram_id: int) -> str:
     async with aiosqlite.connect(db_path) as db:
         cursor = await db.execute(
-            "SELECT dialog_text FROM neuro_bot_dialogs WHERE telegram_id = ?",
+            "SELECT dialog_text FROM users_max WHERE telegram_id = ?",
             (telegram_id,)
         )
         row = await cursor.fetchone()
@@ -455,7 +457,7 @@ async def get_dialog(telegram_id: int) -> str:
 async def delete_line(telegram_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
-            "DELETE FROM neuro_bot_dialogs WHERE telegram_id = ?",
+            "DELETE FROM users_max WHERE telegram_id = ?",
             (telegram_id,)
         )
         await db.commit()
@@ -464,7 +466,7 @@ async def delete_dialog(telegram_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            UPDATE neuro_bot_dialogs
+            UPDATE users_max
             SET dialog_text = '',
                 updated_at = CURRENT_TIMESTAMP
             WHERE telegram_id = ?
@@ -476,7 +478,7 @@ async def delete_dialog(telegram_id: int):
 async def get_med_id(telegram_id: int) -> str | None:
     async with aiosqlite.connect(db_path) as db:
         cursor = await db.execute(
-            "SELECT med_id FROM neuro_bot_dialogs WHERE telegram_id = ?",
+            "SELECT med_id FROM users_max WHERE telegram_id = ?",
             (telegram_id,)
         )
         row = await cursor.fetchone()
@@ -486,7 +488,7 @@ async def set_user_state(telegram_id: int, user_state: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            INSERT INTO neuro_bot_dialogs (telegram_id, user_state)
+            INSERT INTO users_max (telegram_id, user_state)
             VALUES (?, ?)
             ON CONFLICT(telegram_id)
             DO UPDATE SET
@@ -500,7 +502,7 @@ async def set_user_state(telegram_id: int, user_state: str):
 async def get_user_state(telegram_id: int) -> str | None:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-            "SELECT user_state FROM neuro_bot_dialogs WHERE telegram_id = ?",
+            "SELECT user_state FROM users_max WHERE telegram_id = ?",
             (telegram_id,)
         ) as cursor:
             row = await cursor.fetchone()
@@ -510,7 +512,7 @@ async def set_from_manager(telegram_id: int, from_manager: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            INSERT INTO neuro_bot_dialogs (telegram_id, from_manager)
+            INSERT INTO users_max (telegram_id, from_manager)
             VALUES (?, ?)
             ON CONFLICT(telegram_id)
             DO UPDATE SET
@@ -524,7 +526,7 @@ async def set_from_manager(telegram_id: int, from_manager: str):
 async def get_from_manager(telegram_id: int) -> str | None:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-            "SELECT from_manager FROM neuro_bot_dialogs WHERE telegram_id = ?",
+            "SELECT from_manager FROM users_max WHERE telegram_id = ?",
             (telegram_id,)
         ) as cursor:
             row = await cursor.fetchone()
@@ -535,44 +537,44 @@ async def get_from_manager(telegram_id: int) -> str | None:
 # =========================================================
 # USERS
 # =========================================================
-async def get_user(user_id: int) -> dict | None:
-    async with aiosqlite.connect(db_path) as db:
-        cursor = await db.execute(
-            "SELECT user_id, name, is_medosomotr, phone, register_date, from_manager, privacy_policy_date, get_dop_tests FROM user_data WHERE user_id = ?",
-            (user_id,)
-        )
-        row = await cursor.fetchone()
-        if row:
-            return {
-                "user_id": row[0],
-                "name": row[1],
-                "is_medosomotr": row[2],
-                "phone": row[3],
-                "register_date": row[4],
-                "from_manager": row[5],
-                "privacy_policy_date": row[6],
-                "get_dop_tests": row[7]
-            }
-        return None
+# async def get_user(user_id: int) -> dict | None:
+#     async with aiosqlite.connect(db_path) as db:
+#         cursor = await db.execute(
+#             "SELECT user_id, name, is_medosomotr, phone, register_date, from_manager, privacy_policy_date, get_dop_tests FROM user_data WHERE user_id = ?",
+#             (user_id,)
+#         )
+#         row = await cursor.fetchone()
+#         if row:
+#             return {
+#                 "user_id": row[0],
+#                 "name": row[1],
+#                 "is_medosomotr": row[2],
+#                 "phone": row[3],
+#                 "register_date": row[4],
+#                 "from_manager": row[5],
+#                 "privacy_policy_date": row[6],
+#                 "get_dop_tests": row[7]
+#             }
+#         return None
 
 
 # =========================================================
 # ANKETA
 # =========================================================
-async def get_anketa(user_id: int) -> dict | None:
-    async with aiosqlite.connect(db_path) as db:
-        cursor = await db.execute("""
-            SELECT * FROM user_anketa WHERE user_id = ?
-        """, (user_id,))
-        row = await cursor.fetchone()
-        if row:
-            columns = [
-                "user_id", "organization_or_inn", "osmotr_date", "age", "weight", "height",
-                "smoking", "alcohol", "physical_activity",
-                "hypertension", "darkening_of_the_eyes", "sugar", "joint_pain", "chronic_diseases"
-            ]
-            return dict(zip(columns, row))
-        return None
+# async def get_anketa(user_id: int) -> dict | None:
+#     async with aiosqlite.connect(db_path) as db:
+#         cursor = await db.execute("""
+#             SELECT * FROM user_anketa WHERE user_id = ?
+#         """, (user_id,))
+#         row = await cursor.fetchone()
+#         if row:
+#             columns = [
+#                 "user_id", "organization_or_inn", "osmotr_date", "age", "weight", "height",
+#                 "smoking", "alcohol", "physical_activity",
+#                 "hypertension", "darkening_of_the_eyes", "sugar", "joint_pain", "chronic_diseases"
+#             ]
+#             return dict(zip(columns, row))
+#         return None
 
 
 # =========================================================
@@ -581,7 +583,7 @@ async def get_anketa(user_id: int) -> dict | None:
 async def set_neuro_dialog_states(user_id: int, state: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
-            INSERT INTO neuro_dialog_states (user_id, dialog_state)
+            INSERT INTO neuro_dialog_states_max (user_id, dialog_state)
             VALUES (?, ?)
             ON CONFLICT(user_id) DO UPDATE SET dialog_state=excluded.dialog_state
         """, (user_id, state))
@@ -590,7 +592,7 @@ async def set_neuro_dialog_states(user_id: int, state: str):
 async def get_neuro_dialog_states(user_id: int) -> str | None:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute("""
-            SELECT dialog_state FROM neuro_dialog_states WHERE user_id = ?
+            SELECT dialog_state FROM neuro_dialog_states_max WHERE user_id = ?
         """, (user_id,)) as cursor:
             row = await cursor.fetchone()
             return row[0] if row else None
@@ -598,7 +600,7 @@ async def get_neuro_dialog_states(user_id: int) -> str | None:
 async def delete_neuro_dialog_states(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
-            DELETE FROM neuro_dialog_states WHERE user_id = ?
+            DELETE FROM neuro_dialog_states_max WHERE user_id = ?
         """, (user_id,))
         await db.commit()
 
@@ -626,14 +628,14 @@ async def delete_user_answer_state(user_id: int):
 async def save_message_link(group_msg_id: int, user_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
-            INSERT OR REPLACE INTO neuro_message_links (group_message_id, user_id)
+            INSERT OR REPLACE INTO neuro_message_links_max (group_message_id, user_id)
             VALUES (?, ?)
         """, (group_msg_id, user_id))
         await db.commit()
 
 async def get_user_id_by_group_message(group_msg_id: int):
     async with aiosqlite.connect(db_path) as db:
-        cursor = await db.execute("SELECT user_id FROM neuro_message_links WHERE group_message_id = ?", (group_msg_id,))
+        cursor = await db.execute("SELECT user_id FROM neuro_message_links_max WHERE group_message_id = ?", (group_msg_id,))
         row = await cursor.fetchone()
         return row[0] if row else None
 
@@ -688,7 +690,7 @@ async def add_pending_notification(med_id: int, telegram_id: int, chat_id: int, 
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            INSERT INTO pending_notifications (med_id, telegram_id, chat_id, kind)
+            INSERT INTO pending_notifications_max (med_id, telegram_id, chat_id, kind)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(med_id, kind) DO UPDATE SET
                 telegram_id = excluded.telegram_id,
@@ -704,7 +706,7 @@ async def get_all_pending_by_kind(kind: str) -> list[tuple[int, int, int, int]]:
     """
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-            "SELECT id, med_id, telegram_id, chat_id FROM pending_notifications WHERE kind = ?",
+            "SELECT id, med_id, telegram_id, chat_id FROM pending_notifications_max WHERE kind = ?",
             (kind,)
         ) as cursor:
             rows = await cursor.fetchall()
@@ -712,7 +714,7 @@ async def get_all_pending_by_kind(kind: str) -> list[tuple[int, int, int, int]]:
 
 async def delete_pending_by_id(row_id: int):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute("DELETE FROM pending_notifications WHERE id = ?", (row_id,))
+        await db.execute("DELETE FROM pending_notifications_max WHERE id = ?", (row_id,))
         await db.commit()
 
 async def get_results_only(med_id: int) -> Optional[str]:

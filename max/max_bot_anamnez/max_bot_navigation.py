@@ -8,16 +8,16 @@ from maxapi.types import BotStarted
 from maxapi.types import MessageCreated, MessageCallback
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-from max.max_bot_anamnez.max_bot_channel_invite import send_channel_invite
-from max.max_bot_anamnez.max_bot_chat_manager import send_to_chat
+from max.max_bot_after_tests.max_bot_after_tests_main_menu import after_tests_main_menu
 from utils import util_fins
 import asyncio
 from ai_agents.open_ai_main import get_gpt_answer
 from ai_agents import ai_utils
 from utils.anketa_utils import *
 from maxapi.types.attachments.buttons import MessageButton, CallbackButton
-from max.max_bot_anamnez import max_bot_chat_manager
+from max.max_bot_chat import max_bot_chat_manager
 from db.anamnez import anamnez_db
+from db.after_tests import after_tests_db
 
 BACK_BUTTON = "⬅️ Назад"
 image_path = Path(__file__).parent.parent / "images" / "image_andrey.jpg"
@@ -83,7 +83,11 @@ async def bot_started(event: BotStarted):
 
 async def start(event: MessageCreated):
     chat_id, user_id = event.get_ids()
+    user_is_after_tests = await after_tests_db.get_user_state(user_id)
 
+    if user_is_after_tests:
+        await after_tests_main_menu(event)
+        return
     # Получаем пользователя
     user = await anamnez_db.get_user(user_id)
 
@@ -644,7 +648,7 @@ async def handle_dopDop_analizy(event:MessageCallback, context_data: MemoryConte
 
         await asyncio.sleep(3)
 
-        await send_channel_invite(event)
+        await after_tests_main_menu(event)
 
 def build_tests_keyboard(selected_indexes: set[int]):
     keyboard_builder = InlineKeyboardBuilder()
@@ -761,7 +765,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             f"Обследования: {chosen_str}"
         )
 
-        await send_to_chat(event, user_id, text_to_manager)
+        await max_bot_chat_manager.send_to_chat(event, user_id, text_to_manager)
 
         # удаляем сообщение с кнопками
         try:
@@ -796,7 +800,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
 
         await asyncio.sleep(5)
 
-        await send_channel_invite(event)
+        await after_tests_main_menu(event)
 
         await context_data.clear()
 

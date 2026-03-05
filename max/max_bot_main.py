@@ -2,7 +2,8 @@ import os
 import logging
 from dotenv import load_dotenv
 from db.after_tests import after_tests_db
-from max.max_bot_anamnez.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
+from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
+from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
 
 from maxapi import Dispatcher
@@ -20,11 +21,6 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
-
-
-
-
-
 
 
 @dp.message_callback()
@@ -103,6 +99,7 @@ async def main():
 
     asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
     asyncio.create_task(anamnez_db.periodic_sync())
+    asyncio.create_task(scheduler(bot))
 
     # прогрев GPT
     await get_gpt_answer("test", "test", bot=bot)

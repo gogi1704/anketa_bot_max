@@ -1,6 +1,7 @@
 import random
 from utils.anketa_utils import *
 from maxapi.context import MemoryContext
+from db.anamnez import anamnez_db
 
 
 def normalize_name(text: str) -> str:
@@ -116,18 +117,18 @@ async def validate_anketa_questions(
     # ===== НЕЙРО-ПРОВЕРКА (12 вопрос) =====
 
     elif position == 12:
-        dialog = await dialogs_db.get_dialog(user_id)
+        dialog = await anamnez_db.get_dialog(user_id)
 
         result = await question_hronic(dialog, bot= bot)
 
         if "complete" in result:
             # НЕ добавляем в answers здесь!
             # добавление должно происходить в anketa_dialog
-            await dialogs_db.delete_dialog(user_id)
+            await anamnez_db.delete_dialog(user_id)
             return result
 
         else:
-            await dialogs_db.append_answer(
+            await anamnez_db.append_answer(
                 telegram_id=user_id,
                 text=f"Терапевт сказал:{result}\n"
             )
