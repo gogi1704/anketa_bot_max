@@ -7,8 +7,6 @@ from maxapi.enums.sender_action import SenderAction
 from maxapi.types import BotStarted
 from maxapi.types import MessageCreated, MessageCallback
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-
-from max.max_bot_after_tests.max_bot_after_tests_main_menu import after_tests_main_menu
 from utils import util_fins
 import asyncio
 from ai_agents.open_ai_main import get_gpt_answer
@@ -83,11 +81,7 @@ async def bot_started(event: BotStarted):
 
 async def start(event: MessageCreated):
     chat_id, user_id = event.get_ids()
-    user_is_after_tests = await after_tests_db.get_user_state(user_id)
 
-    if user_is_after_tests:
-        await after_tests_main_menu(event)
-        return
     # Получаем пользователя
     user = await anamnez_db.get_user(user_id)
 
@@ -136,7 +130,7 @@ async def start(event: MessageCreated):
         attachments=[builder.as_markup()]
     )
 
-async def handle_text_message(event: MessageCreated):
+async def handle_text_message_anamnez(event: MessageCreated):
     text = event.message.body.text
     if not text:
         return
@@ -213,15 +207,15 @@ async def name_dialog(event: MessageCreated):
     if user is None:
         await anamnez_db.add_user(
             user_id=user_id,
-            name= "default",
+            name= name,
             from_manager= "base_url",
         )
     else:
         await anamnez_db.add_user(
             user_id=user_id,
             name=name,
-            from_manager=user["from_manager"],
-            register_date=user["register_date"],
+            from_manager=user["from_manager"] or "base_url",
+            register_date=user["register_date"] or "",
         )
 
 
@@ -528,6 +522,7 @@ async def add_to_anketa(event: MessageCreated, answers: list[Any]):
     # Безопасность: проверка длины анкеты
     if len(answers) < 13:
         raise ValueError("Недостаточно ответов для сохранения анкеты")
+    print(answers)
 
     # В текущем коде обе ветки одинаковые.
     # Если позже появится различие — логика уже готова.
@@ -648,7 +643,9 @@ async def handle_dopDop_analizy(event:MessageCallback, context_data: MemoryConte
 
         await asyncio.sleep(3)
 
-        await after_tests_main_menu(event)
+        return "after_tests_start"
+    return None
+
 
 def build_tests_keyboard(selected_indexes: set[int]):
     keyboard_builder = InlineKeyboardBuilder()
@@ -799,10 +796,10 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         )
 
         await asyncio.sleep(5)
-
-        await after_tests_main_menu(event)
-
         await context_data.clear()
+        return "after_tests_start"
+    return None
+
 
 async def handle_consent(event: MessageCallback, payload: str):
     chat_id, user_id = event.get_ids()

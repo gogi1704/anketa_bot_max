@@ -5,3 +5,5 @@ aiosqlite
 oauth2client==4.1.3
 google-api-python-client
 gspread
+python-docx
+aiohttp

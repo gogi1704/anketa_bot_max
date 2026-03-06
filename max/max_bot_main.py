@@ -1,16 +1,16 @@
 import os
 import logging
 from dotenv import load_dotenv
-from db.after_tests import after_tests_db
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
-
+from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_tests_main_menu, handle_start_check_up, \
+    handle_decode_yes_no, handle_after_good_tests_yes_no, after_tests_main_menu
 from maxapi import Dispatcher
 from maxapi.types import (
     Command, BotCommand, )
 
-
+from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
 
@@ -30,7 +30,7 @@ async def callback_router(event: MessageCallback):
 
     # Закрываем "loading" кнопки
     await event.answer()
-
+#__________________________________________________________________________________________________
     # ===== CONSENT =====
     if payload in ("consent_yes", "consent_no"):
         await handle_consent(event, payload)
@@ -38,7 +38,9 @@ async def callback_router(event: MessageCallback):
 
     # ===== TOGGLE =====
     if payload.startswith("toggle:") or payload == "done":
-        await handle_toggle(event, context_manager.get(chat_id, user_id))
+        is_after_tests =  await handle_toggle(event, context_manager.get(chat_id, user_id))
+        if is_after_tests:
+            await after_tests_main_menu(event)
         return
 
     # ===== DOP =====
@@ -47,8 +49,31 @@ async def callback_router(event: MessageCallback):
         return
 
     if payload.startswith("dopDop_"):
-        await handle_dopDop_analizy(event,context_manager.get(chat_id, user_id))
+        is_after_tests = await handle_dopDop_analizy(event,context_manager.get(chat_id, user_id))
+        if is_after_tests:
+            await after_tests_main_menu(event)
         return
+
+#__________________________________________________________________________________________________
+
+    if payload.startswith("tests_main_menu_"):
+        await handle_after_tests_main_menu(event)
+        return
+
+    if payload.startswith("сheck_up_start_"):
+        await handle_start_check_up(event,context_manager.get(chat_id, user_id))
+        return
+
+    if payload.startswith("tests_decode_"):
+        await handle_decode_yes_no(event)
+        return
+
+    if payload.startswith("after_good_tests_"):
+        await handle_after_good_tests_yes_no(event)
+        return
+
+
+# __________________________________________________________________________________________________
 
     # ===== MANAGER REPLY =====
     if payload.startswith("reply_to_manager|"):
@@ -61,7 +86,13 @@ async def bot_started_handler(event: BotStarted):
 
 @dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
-    await start(event)
+    chat_id, user_id = event.get_ids()
+    user_is_after_tests = await after_tests_db.get_user_state(user_id)
+
+    if user_is_after_tests:
+        await after_tests_main_menu(event)
+    else:
+        await start(event)
 
 
 # @dp.message_created(Command("update_db"))
@@ -77,6 +108,8 @@ async def clear_handler(event: MessageCreated):
 @dp.message_created()
 async def text_handler(event: MessageCreated):
     text = event.message.body.text
+    chat_id, user_id = event.get_ids()
+    user_is_after_tests= await after_tests_db.get_user_state(user_id)
 
     if not text:
         return
@@ -88,9 +121,11 @@ async def text_handler(event: MessageCreated):
         await handle_manager_reply(event)
         return
 
+    if user_is_after_tests:
+        await handle_text_message_after_tests(event)
+        return
 
-
-    await handle_text_message(event)
+    await handle_text_message_anamnez(event)
 
 
 async def main():

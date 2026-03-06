@@ -8,7 +8,7 @@ from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYST
 from utils import  after_tests_utils
 
 
-async def handle_text_message(event:MessageCreated):
+async def handle_text_message_after_tests(event:MessageCreated):
 
     message = event.message
     bot = event.bot

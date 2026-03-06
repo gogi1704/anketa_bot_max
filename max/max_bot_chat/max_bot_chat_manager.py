@@ -80,5 +80,5 @@ async def handle_manager_reply(event:MessageCreated):
             await event.message.reply("⚠️ Не удалось найти пользователя по сообщению.")
 
     else:
-        await event.message.reply("⚠️ Это не ответ на сообщение пользователя.")
+        # await event.message.reply("⚠️ Это не ответ на сообщение пользователя.")
         return

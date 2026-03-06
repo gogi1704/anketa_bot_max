@@ -356,18 +356,6 @@ async def delete_dialog( telegram_id: int):
             await db.commit()
 #______
 
-
-#______ USERS
-# async def add_user(user_id: int, name: str, is_medosomotr:str = None, phone: str = None,
-#                    register_date = datetime.datetime.now(datetime.UTC),
-#                    from_manager:str = None, privacy_policy_date:datetime.datetime = None, get_dop_tests:str = None):
-#     async with aiosqlite.connect(db_path) as db:
-#         await db.execute("""
-#             INSERT OR REPLACE INTO user_data (user_id, name,is_medosomotr, phone, register_date, from_manager, privacy_policy_date, get_dop_tests)
-#             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-#         """, (user_id, name, is_medosomotr, phone, register_date, from_manager, privacy_policy_date, get_dop_tests ))
-#         await db.commit()
-
 async def add_user(
     user_id: int,
     name: str,

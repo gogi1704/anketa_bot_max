@@ -1,7 +1,9 @@
 import html
 import json
 
+from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
+from maxapi.methods.types.sended_message import SendedMessage
 
 from db.after_tests import after_tests_db as data_base
 from datetime import timedelta
@@ -54,27 +56,25 @@ def parse_int(text: str) -> int | None:
         except ValueError:
             return None
 
-async def send_wait_emoji(bot, chat_id: int, wait_text: str = "⏳"):
+async def send_wait_emoji(bot:Bot, chat_id: int, wait_text: str = "⏳"):
     try:
         return await bot.send_message(chat_id=chat_id, text=wait_text)
     except Exception:
         return None
 
-async def replace_wait_with_text(bot, chat_id: int, wait_msg, answer_text: str):
+async def replace_wait_with_text(bot:Bot, chat_id: int, wait_msg:SendedMessage, answer_text: str):
 
-    if wait_msg and getattr(wait_msg, "message_id", None):
+    if wait_msg and getattr(wait_msg.message.body, "mid", None):
         try:
             await bot.edit_message(
-                chat_id=chat_id,
-                message_id=wait_msg.message_id,
+                message_id=wait_msg.message.body.mid,
                 text=answer_text
             )
             return
         except Exception:
             try:
                 await bot.delete_message(
-                    chat_id=chat_id,
-                    message_id=wait_msg.message_id
+                    message_id=wait_msg.message.body.mid
                 )
             except Exception:
                 pass
