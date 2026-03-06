@@ -5,7 +5,7 @@ from typing import Optional
 import aiohttp
 from docx import Document
 from maxapi.enums.upload_type import UploadType
-from maxapi.types import MessageCallback, InputMedia
+from maxapi.types import InputMedia
 
 GOOGLE_DOC_ID_RE = re.compile(r"/document/d/([a-zA-Z0-9_-]+)")
 
@@ -71,7 +71,7 @@ def split_urls_from_cell(cell_value: str) -> list[str]:
     return urls
 
 
-async def send_results_doc_and_text(event:MessageCallback,
+async def send_results_doc_and_text(event,
     doc_urls: str,
 ):
     chat_id, user_id = event.get_ids()
@@ -99,7 +99,6 @@ async def send_results_doc_and_text(event:MessageCallback,
         tmp_path = None
         try:
             tmp_path = await download_google_doc_as_docx(doc_id)
-            text = extract_text_from_docx(tmp_path)
 
             await event.bot.send_message(
                 user_id=user_id,

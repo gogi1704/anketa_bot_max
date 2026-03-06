@@ -1,9 +1,7 @@
 import aiosqlite
-import datetime
 import asyncio
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
 from typing import Optional
 
 db_path = 'after_tests.db'
@@ -826,7 +824,7 @@ async def sync_tests_and_results_from_google():
 
     print("[✅] tests_and_results синхронизированы из Google Sheets (UPSERT, без очистки)")
 
-async def sync_tests_job(context):
+async def sync_tests_job():
     try:
         await sync_tests_and_results_from_google()
     except Exception as e:

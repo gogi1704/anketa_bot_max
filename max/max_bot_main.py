@@ -1,12 +1,14 @@
 import os
 import logging
 from dotenv import load_dotenv
+
+from db.after_tests import after_tests_db
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_tests_main_menu, handle_start_check_up, \
-    handle_decode_yes_no, handle_after_good_tests_yes_no, after_tests_main_menu
-from maxapi import Dispatcher
+    handle_decode_yes_no, handle_after_good_tests_yes_no, after_tests_main_menu, handle_empty_decode
+from maxapi import Dispatcher, Bot
 from maxapi.types import (
     Command, BotCommand, )
 
@@ -72,6 +74,10 @@ async def callback_router(event: MessageCallback):
         await handle_after_good_tests_yes_no(event)
         return
 
+    if payload.startswith("empty_decode_get_"):
+        await handle_empty_decode(event)
+        return
+
 
 # __________________________________________________________________________________________________
 
@@ -102,7 +108,7 @@ async def start_handler(event: MessageCreated):
 
 @dp.message_created(Command("clear_and_restart"))
 async def clear_handler(event: MessageCreated):
-    await clear_all(event, bot)
+    await clear_all(event)
 
 
 @dp.message_created()

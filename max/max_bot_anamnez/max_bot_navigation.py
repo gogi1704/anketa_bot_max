@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Any
 import datetime
-from maxapi import Bot
 from maxapi.context import MemoryContext
 from maxapi.enums.sender_action import SenderAction
 from maxapi.types import BotStarted
@@ -15,13 +14,12 @@ from utils.anketa_utils import *
 from maxapi.types.attachments.buttons import MessageButton, CallbackButton
 from max.max_bot_chat import max_bot_chat_manager
 from db.anamnez import anamnez_db
-from db.after_tests import after_tests_db
 
 BACK_BUTTON = "⬅️ Назад"
 image_path = Path(__file__).parent.parent / "images" / "image_andrey.jpg"
 
 
-async def clear_all(event: MessageCreated, bot: Bot):
+async def clear_all(event: MessageCreated):
     """Очистка всех данных пользователя и перезапуск стартового сценария"""
     # Показываем «печатает…»
     chat_id, user_id = event.get_ids()
@@ -218,12 +216,7 @@ async def name_dialog(event: MessageCreated):
             register_date=user["register_date"] or "",
         )
 
-
     await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["anketa"])
-
-    answer = resources.second_text.format(user_name=name, user_id=user_id)
-    msg = await event.message.answer(text=answer)
-
     await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
     await asyncio.sleep(1)
 
@@ -514,11 +507,6 @@ async def ask_question(event: MessageCreated, pos: int, questions: list[str]):
 
 async def add_to_anketa(event: MessageCreated, answers: list[Any]):
     chat_id, user_id = event.get_ids()
-
-    # Получаем mode из состояния БД
-    state = await anamnez_db.get_user_state(user_id)
-    mode = state.get("mode")
-
     # Безопасность: проверка длины анкеты
     if len(answers) < 13:
         raise ValueError("Недостаточно ответов для сохранения анкеты")
@@ -584,9 +572,6 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
                 text="Спасибо, но нет",
                 payload="dopDop_no"
             ))
-
-        anketa = await anamnez_db.get_anketa(user_id=user_id)
-        date = anketa.get("osmotr_date")
 
         await event.bot.send_message(
             chat_id=chat_id,
@@ -701,7 +686,7 @@ async def choose_tests(event: MessageCallback, context_data: MemoryContext):
 async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
     state = await context_data.get_state()
     if state != "SELECTING_TESTS":
-        return
+        return None
 
     data = await context_data.get_data()
     selected = data.get("selected_tests", set())
@@ -733,16 +718,14 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
                 chat_id=event.from_user.id,
                 text="Выберите хотя бы один анализ."
             )
-            return
+            return None
 
         chosen_names = [resources.TESTS[i] for i in selected]
         chosen_str = ", ".join(chosen_names)
-
         chat_id,user_id = event.get_ids()
 
         # получаем данные из БД (они постоянные)
         user_data = await anamnez_db.get_user(user_id=user_id)
-        anketa = await anamnez_db.get_anketa(user_id=user_id)
 
         # сохраняем финальный выбор в БД
         await anamnez_db.add_user(

@@ -37,8 +37,9 @@ def kb_after_good_tests():
     return builder.as_markup()
 
 
-# def kb_back_complete_check_up():
-#     builder = InlineKeyboardBuilder()
-#     builder.row(CallbackButton(text= "Вернуться в меню",payload= "choose_type_user_else"))
-#
-#     return builder.as_markup()
+def kb_tests_decode_empty():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text= "Попросить лаборанта",payload= "empty_decode_get_laborant"))
+    builder.row(CallbackButton(text="Обратиться к менеджеру", payload="empty_decode_get_manager"))
+
+    return builder.as_markup()
