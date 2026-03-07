@@ -231,7 +231,7 @@ async def sync_from_google_sheets():
             )
 
         await db.commit()
-        print("[✅] Данные из Google Sheets загружены в SQLite")
+        print("[✅] Данные из Google Sheets ANAMNEZ_DB загружены в SQLite")
 
 # ==== Выгрузка данных из SQLite в Google Sheets ====
 async def sync_to_google_sheets():
@@ -299,7 +299,7 @@ async def sync_to_google_sheets():
         except Exception as e:
             print(f"[❌] Ошибка api_keys: {e}")
 
-        print("[✅] Данные из SQLite выгружены в Google Sheets")
+        print("[✅] Данные ANAMNEZ_DB выгружены в Google Sheets")
 
 # ==== Периодическая синхронизация ====
 async def periodic_sync(interval: int = 3600):
@@ -623,6 +623,7 @@ async def reset_user_state(user_id: int):
 
 #______
 async def save_message_link(group_msg_id: int, user_id: int):
+    group_msg_id = str(group_msg_id)
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
             INSERT OR REPLACE INTO message_links (group_message_id, user_id)
@@ -631,6 +632,7 @@ async def save_message_link(group_msg_id: int, user_id: int):
         await db.commit()
 
 async def get_user_id_by_group_message(group_msg_id: str):
+    group_msg_id = str(group_msg_id)
     async with aiosqlite.connect(db_path) as db:
         cursor = await db.execute("SELECT user_id FROM message_links WHERE group_message_id = ?", (group_msg_id,))
         row = await cursor.fetchone()

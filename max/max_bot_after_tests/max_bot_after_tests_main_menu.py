@@ -13,7 +13,7 @@ from max.max_bot_anamnez.max_bot_navigation import choose_tests
 import resources
 from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
 from db.after_tests import after_tests_db as db
-from max.max_bot_chat.max_bot_chat_manager import send_to_chat
+from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat
 from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji, parse_base_answer, \
     replace_wait_with_text, pars_answer_and_data
 from doc_funs import send_results_doc_and_text, split_urls_from_cell
@@ -265,6 +265,8 @@ async def handle_after_tests_main_menu(event:MessageCallback):
 
     elif data == "tests_main_menu_consult_neuro":
 
+        await db.delete_dialog(user_id)
+
         await db.set_neuro_dialog_states(
             user_id,
             resources.dialog_states["base_speak"]
@@ -289,6 +291,7 @@ async def handle_after_tests_main_menu(event:MessageCallback):
             wait_msg,
             answer
         )
+
 
 async def handle_get_med_id(event:MessageCreated):
     chat_id, user_id = event.get_ids()
@@ -463,6 +466,7 @@ async def handle_base_speak(event:MessageCreated, dialog):
         BASE_SYSTEM_PROMPT,
         BASE_USER_PROMPT.format(dialog=dialog)
     )
+    print(raw)
     answer = parse_base_answer(raw)
 
     if answer == "get_med":
@@ -557,7 +561,7 @@ async def handle_base_speak(event:MessageCreated, dialog):
                 await event.bot.send_message(
                     user_id=user_id,
                     text=resources.TEXT_TESTS_MAIN_MENU,
-                    attachments= kb_tests_main_menu()
+                    attachments= [kb_tests_main_menu()]
                 )
 
         else:
@@ -711,19 +715,62 @@ async def handle_manager_collect(event:MessageCreated, dialog, state):
     await replace_wait_with_text(event.bot, chat_id, wait_msg, result)
     return
 
+async def handle_boss_collect(event: MessageCreated, dialog):
+    def add(role, msg):
+        return dialog + f"\n{role}: {msg}"
+
+    message = event.message
+    chat_id, user_id = event.get_ids()
+    text = message.body.text.strip()
+    dialog = add("User", text)
+    await db.append_answer(user_id, "User", text)
+
+    wait_msg = await send_wait_emoji(event.bot, chat_id)
+
+    raw = await open_ai_main.get_gpt_answer(
+        system_prompt=BOSS_COLLECT_SYSTEM_PROMPT,
+        user_prompt=BASE_USER_PROMPT.format(dialog=dialog)
+    )
+
+    result, data = pars_answer_and_data(raw)
+
+    if result == "complete":
+        print("boss_complete")
+        await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
+        # Отправка в группу
+        text_to_manager = f"Пользователь обращается к руководству. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
+        await send_to_chat(event, user_id, text_to_manager)
+        await replace_wait_with_text(event.bot, chat_id, wait_msg, "Спасибо. Ваше обращение передано руководству.")
+        await complete_dialog(user_id= user_id,
+                              last_text="Дайте знать, если вам что то понадобится!")
+        return
+
+    elif result == "back":
+        msg_text = "Ок. Дайте знать, если вам что то понадобится"
+        await complete_dialog(user_id= user_id,
+                              last_text=msg_text)
+
+        await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
+        await replace_wait_with_text(event.bot, chat_id, wait_msg, msg_text)
+        return
+
+    dialog = add("Assistant", result)
+    await db.append_answer(user_id, "Assistant", result)
+    await replace_wait_with_text(event.bot, chat_id, wait_msg, result)
+    return
 
 
 
-async def handle_start_check_up(event, context_data: MemoryContext):
+async def handle_start_check_up(event:MessageCallback, context_data: MemoryContext):
     chat_id, user_id = event.get_ids()
     data = event.callback.payload
     msg = event.message
 
     if data == "сheck_up_start_back" :
-        await event.bot.send_message(
-                chat_id= chat_id,
+        await event.bot.edit_message(
+                message_id= event.message.body.mid,
                 text= resources.TEXT_TESTS_MAIN_MENU,
-                reply_markup= tests_keyboards.kb_tests_main_menu()
+                attachments= [tests_keyboards.kb_tests_main_menu()]
             )
     elif data == "сheck_up_start_add" :
         await choose_tests(event, context_data)

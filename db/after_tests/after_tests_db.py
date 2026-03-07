@@ -46,7 +46,7 @@ async def init_db():
         # ===== NEW (как в другом боте) =====
         await db.execute("""
             CREATE TABLE IF NOT EXISTS neuro_message_links_max (
-                group_message_id INTEGER PRIMARY KEY,
+                group_message_id TEXT PRIMARY KEY,
                 user_id INTEGER NOT NULL
             )
         """)
@@ -295,7 +295,7 @@ async def sync_from_google_sheets():
             )
 
         await db.commit()
-        print("[✅] Данные из Google Sheets загружены в SQLite (включая pending_notifications)")
+        print("[✅] Данные из Google AFTER_TESTS загружены в SQLite ")
 
 
 
@@ -315,7 +315,7 @@ async def sync_to_google_sheets():
         sheets["neuro_dialog_states_max"].update("A1", [["user_id", "dialog_state"]] + rows)
 
         # ---------------------------
-        # neuro_bot_dialogs
+        # users
         # ---------------------------
         async with db.execute(
             "SELECT telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager FROM users_max"
@@ -393,7 +393,7 @@ async def sync_to_google_sheets():
             [["id", "med_id", "telegram_id", "chat_id", "kind", "created_at"]] + rows
         )
 
-        print("[✅] Данные из SQLite выгружены в Google Sheets (включая pending_notifications_max)")
+        print("[✅] Данные AFTER_TESTS_DB выгружены в Google Sheets ")
 
 
 
@@ -531,50 +531,6 @@ async def get_from_manager(telegram_id: int) -> str | None:
             return row[0] if row and row[0] else None
 
 
-
-# =========================================================
-# USERS
-# =========================================================
-# async def get_user(user_id: int) -> dict | None:
-#     async with aiosqlite.connect(db_path) as db:
-#         cursor = await db.execute(
-#             "SELECT user_id, name, is_medosomotr, phone, register_date, from_manager, privacy_policy_date, get_dop_tests FROM user_data WHERE user_id = ?",
-#             (user_id,)
-#         )
-#         row = await cursor.fetchone()
-#         if row:
-#             return {
-#                 "user_id": row[0],
-#                 "name": row[1],
-#                 "is_medosomotr": row[2],
-#                 "phone": row[3],
-#                 "register_date": row[4],
-#                 "from_manager": row[5],
-#                 "privacy_policy_date": row[6],
-#                 "get_dop_tests": row[7]
-#             }
-#         return None
-
-
-# =========================================================
-# ANKETA
-# =========================================================
-# async def get_anketa(user_id: int) -> dict | None:
-#     async with aiosqlite.connect(db_path) as db:
-#         cursor = await db.execute("""
-#             SELECT * FROM user_anketa WHERE user_id = ?
-#         """, (user_id,))
-#         row = await cursor.fetchone()
-#         if row:
-#             columns = [
-#                 "user_id", "organization_or_inn", "osmotr_date", "age", "weight", "height",
-#                 "smoking", "alcohol", "physical_activity",
-#                 "hypertension", "darkening_of_the_eyes", "sugar", "joint_pain", "chronic_diseases"
-#             ]
-#             return dict(zip(columns, row))
-#         return None
-
-
 # =========================================================
 # NEURO_DIALOG_STATE
 # =========================================================
@@ -624,6 +580,7 @@ async def delete_user_answer_state(user_id: int):
         await db.commit()
 
 async def save_message_link(group_msg_id: int, user_id: int):
+    group_msg_id = str(group_msg_id)
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
             INSERT OR REPLACE INTO neuro_message_links_max (group_message_id, user_id)
@@ -632,6 +589,7 @@ async def save_message_link(group_msg_id: int, user_id: int):
         await db.commit()
 
 async def get_user_id_by_group_message(group_msg_id: int):
+    group_msg_id = str(group_msg_id)
     async with aiosqlite.connect(db_path) as db:
         cursor = await db.execute("SELECT user_id FROM neuro_message_links_max WHERE group_message_id = ?", (group_msg_id,))
         row = await cursor.fetchone()

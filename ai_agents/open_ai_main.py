@@ -75,7 +75,7 @@ async def call_openai_with_auto_key(system_prompt, user_prompt, client, bot, mod
 #     print(answer)
 #     return answer
 
-async def get_gpt_answer(system_prompt, user_prompt, bot = None, model = model_gpt4o_mini):
+async def get_gpt_answer(system_prompt, user_prompt, bot = None, model = model_gpt_5_mini):
     keys = await db.get_active_keys()
     answer = "api_error_Empty_keys"
     for key in keys:

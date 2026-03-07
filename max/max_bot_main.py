@@ -3,7 +3,9 @@ import logging
 from dotenv import load_dotenv
 
 from db.after_tests import after_tests_db
+from db.db_utils import update_db
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
+from max.max_bot_chat import max_bot_cha_manager_after_tests
 from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_tests_main_menu, handle_start_check_up, \
@@ -83,7 +85,13 @@ async def callback_router(event: MessageCallback):
 
     # ===== MANAGER REPLY =====
     if payload.startswith("reply_to_manager|"):
-        await handle_reply_button_pressed(event)
+        chat_id, user_id = event.get_ids()
+        user_is_after_tests = await after_tests_db.get_user_state(user_id)
+
+        if user_is_after_tests:
+            await max_bot_cha_manager_after_tests.handle_reply_button_pressed(event)
+        else:
+            await handle_reply_button_pressed(event)
         return
 
 @dp.bot_started()
@@ -101,9 +109,9 @@ async def start_handler(event: MessageCreated):
         await start(event)
 
 
-# @dp.message_created(Command("update_db"))
-# async def update_db_handler(event: MessageCreated):
-#     await update_db(event)
+@dp.message_created(Command("update_db"))
+async def update_db_handler(event: MessageCreated):
+    await update_db(event)
 
 
 @dp.message_created(Command("clear_and_restart"))
@@ -121,10 +129,17 @@ async def text_handler(event: MessageCreated):
         return
 
     if event.message.link and event.message.link.chat_id == resources.GROUP_CHAT_ID:
-        await handle_manager_reply(event)
+        if user_is_after_tests:
+            await max_bot_cha_manager_after_tests.handle_manager_reply(event)
+        else:
+            await handle_manager_reply(event)
         return
+
     elif event.message.recipient.chat_id == resources.GROUP_CHAT_ID:
-        await handle_manager_reply(event)
+        if user_is_after_tests:
+            await max_bot_cha_manager_after_tests.handle_manager_reply(event)
+        else:
+            await handle_manager_reply(event)
         return
 
     if user_is_after_tests:

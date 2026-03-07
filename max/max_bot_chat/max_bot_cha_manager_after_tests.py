@@ -2,7 +2,7 @@ from maxapi.types import MessageCreated, MessageCallback, CallbackButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 import resources
-from db.anamnez.anamnez_db import save_message_link, save_user_answer_state, get_user_id_by_group_message
+from db.after_tests.after_tests_db import save_message_link, save_user_answer_state, get_user_id_by_group_message
 
 
 async def send_to_chat(event, user_id: int, message_text: str):
@@ -56,7 +56,7 @@ async def handle_manager_reply(event:MessageCreated):
     if linked_message:
         group_message_id = linked_message.message.seq
 
-        user_id = await get_user_id_by_group_message(str(group_message_id))
+        user_id = await get_user_id_by_group_message(group_message_id)
 
         if user_id:
             builder = InlineKeyboardBuilder()
