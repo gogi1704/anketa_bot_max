@@ -780,7 +780,7 @@ async def sync_tests_and_results_from_google():
 
         await conn.commit()
 
-    print("[✅] tests_and_results синхронизированы из Google Sheets (UPSERT, без очистки)")
+    print("[✅] tests_and_results синхронизированы из Google Sheets")
 
 async def sync_tests_job():
     try:

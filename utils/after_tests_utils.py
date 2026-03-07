@@ -9,6 +9,9 @@ from db.after_tests import after_tests_db as data_base
 from datetime import timedelta
 import asyncio
 
+from db.after_tests.after_tests_db import sync_tests_job
+
+
 def parse_base_answer(model_response: str) -> str:
     """
     Извлекает значение поля 'answer' из JSON-ответа модели.
@@ -91,9 +94,8 @@ async def process_pending_kind(bot, kind: str):
     kind = str(kind).strip().lower()
     tasks = await data_base.get_all_pending_by_kind(kind)
 
-    MAX_PER_RUN = 30
+    MAX_PER_RUN = 300
     sent = 0
-
     for row_id, med_id, telegram_id, chat_id in tasks:
 
         if sent >= MAX_PER_RUN:
@@ -126,7 +128,6 @@ async def process_pending_kind(bot, kind: str):
 
 
 async def pending_decode_job(bot):
-
     if _pending_decode_lock.locked():
         return
 
@@ -136,6 +137,7 @@ async def pending_decode_job(bot):
 
 async def scheduler(bot):
     while True:
+        await sync_tests_job()
         await pending_decode_job(bot)
         await asyncio.sleep(7200)  # каждые 2 часа
 
