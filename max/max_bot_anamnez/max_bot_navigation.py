@@ -149,9 +149,9 @@ async def handle_text_message_anamnez(event: MessageCreated):
 
         # Отправляем сообщение в группу менеджеров
         await max_bot_chat_manager.send_to_chat(
-            event = event,
+            bot = event.bot,
             user_id= user_id,
-            message_text=f"📨 Пользователь ответил:\n\n{text}\n\n\n#Диалог_с_{user_id}"
+            message_text=f"📨 Пользователь ответил:\n\n{text}\n\n\n#Диалог_{user_id}"
         )
 
         await event.message.answer("✅ Ваш ответ отправлен менеджеру.")
@@ -726,6 +726,9 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
 
         # получаем данные из БД (они постоянные)
         user_data = await anamnez_db.get_user(user_id=user_id)
+        anketa = await anamnez_db.get_anketa(user_id=user_id)
+        osmotr_date = anketa["osmotr_date"] if anketa["osmotr_date"] else "ошибка получения даты"
+        inn_organization = anketa["organization_or_inn"] if anketa["organization_or_inn"] else "ошибка получения ИНН"
 
         # сохраняем финальный выбор в БД
         await anamnez_db.add_user(
@@ -741,11 +744,13 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         # сообщение менеджеру
         text_to_manager = (
             f"Пользователь: {user_data['name']} (ID- {user_id}).\n"
+            f"Дата осмотра: {osmotr_date}\n"
+            f"ИНН организаци: {inn_organization}\n"
             f"Планирует пройти дополнительные обследования.\n\n"
             f"Обследования: {chosen_str}"
         )
 
-        await max_bot_chat_manager.send_to_chat(event, user_id, text_to_manager)
+        await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
 
         # удаляем сообщение с кнопками
         try:

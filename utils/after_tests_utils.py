@@ -1,3 +1,4 @@
+import asyncio
 import html
 import json
 
@@ -6,10 +7,8 @@ from maxapi.enums.sender_action import SenderAction
 from maxapi.methods.types.sended_message import SendedMessage
 
 from db.after_tests import after_tests_db as data_base
-from datetime import timedelta
-import asyncio
-
 from db.after_tests.after_tests_db import sync_tests_job
+from max.max_bot_chat.max_bot_chat_manager import send_to_chat
 
 
 def parse_base_answer(model_response: str) -> str:
@@ -89,10 +88,11 @@ async def replace_wait_with_text(bot:Bot, chat_id: int, wait_msg:SendedMessage, 
 
 _pending_decode_lock = asyncio.Lock()
 
-async def process_pending_kind(bot, kind: str):
+async def process_pending_kind(bot:Bot, kind: str):
 
     kind = str(kind).strip().lower()
     tasks = await data_base.get_all_pending_by_kind(kind)
+    user_id = bot.me.user_id
 
     MAX_PER_RUN = 300
     sent = 0
@@ -119,6 +119,8 @@ async def process_pending_kind(bot, kind: str):
             try:
                 await bot.send_message(chat_id=chat_id, text=text)
                 await data_base.delete_pending_by_id(row_id)
+                message_text = f"Пользователь оставлял заявку на получение консультации по результатам анализов. Только что мы отправили ему результаты.\n({result})\n \n\n#Диалог_{user_id}"
+                await send_to_chat(bot= bot, user_id= user_id, message_text= message_text )
                 sent += 1
                 await asyncio.sleep(0.2)
 
@@ -127,7 +129,7 @@ async def process_pending_kind(bot, kind: str):
                 continue
 
 
-async def pending_decode_job(bot):
+async def pending_decode_job(bot:Bot):
     if _pending_decode_lock.locked():
         return
 
@@ -135,7 +137,7 @@ async def pending_decode_job(bot):
         await process_pending_kind(bot, "decode")
 
 
-async def scheduler(bot):
+async def scheduler(bot:Bot):
     while True:
         await sync_tests_job()
         await pending_decode_job(bot)

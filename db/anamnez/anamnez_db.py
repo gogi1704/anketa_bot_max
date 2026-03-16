@@ -1,12 +1,11 @@
-import aiosqlite
-import datetime
 import asyncio
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import os
+import datetime
 import json
 from typing import Dict, Any
 
+import aiosqlite
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 db_path='anamnez.db'
 from pathlib import Path

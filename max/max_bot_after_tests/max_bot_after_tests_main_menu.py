@@ -762,7 +762,7 @@ async def handle_boss_collect(event: MessageCreated, dialog):
 
 
 async def handle_start_check_up(event:MessageCallback, context_data: MemoryContext):
-    chat_id, user_id = event.get_ids()
+    _, _ = event.get_ids()
     data = event.callback.payload
     msg = event.message
 

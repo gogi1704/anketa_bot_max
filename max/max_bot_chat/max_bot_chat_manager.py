@@ -1,3 +1,4 @@
+from maxapi import Bot
 from maxapi.types import MessageCreated, MessageCallback, CallbackButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -5,8 +6,8 @@ import resources
 from db.anamnez.anamnez_db import save_message_link, save_user_answer_state, get_user_id_by_group_message
 
 
-async def send_to_chat(event, user_id: int, message_text: str):
-    sent = await event.bot.send_message(
+async def send_to_chat(bot:Bot, user_id: int, message_text: str):
+    sent = await bot.send_message(
         chat_id=resources.GROUP_CHAT_ID,
         text=message_text
     )

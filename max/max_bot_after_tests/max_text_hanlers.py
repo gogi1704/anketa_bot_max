@@ -26,7 +26,7 @@ async def handle_text_message_after_tests(event:MessageCreated):
         await max_bot_cha_manager_after_tests.send_to_chat(
             event = event,
             user_id= user_id,
-            message_text= f"📨 Пользователь ответил:\n\n{text}\n\n#Диалог_с_{user_id}"
+            message_text= f"📨 Пользователь ответил:\n\n{text}\n\n#Диалог_{user_id}"
         )
 
         await bot.send_message(
