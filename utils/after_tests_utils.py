@@ -92,7 +92,6 @@ async def process_pending_kind(bot:Bot, kind: str):
 
     kind = str(kind).strip().lower()
     tasks = await data_base.get_all_pending_by_kind(kind)
-    user_id = bot.me.user_id
 
     MAX_PER_RUN = 300
     sent = 0
@@ -119,8 +118,8 @@ async def process_pending_kind(bot:Bot, kind: str):
             try:
                 await bot.send_message(chat_id=chat_id, text=text)
                 await data_base.delete_pending_by_id(row_id)
-                message_text = f"Пользователь оставлял заявку на получение консультации по результатам анализов. Только что мы отправили ему результаты.\n({result})\n \n\n#Диалог_{user_id}"
-                await send_to_chat(bot= bot, user_id= user_id, message_text= message_text )
+                message_text = f"Пользователь оставлял заявку на получение консультации по результатам анализов. Только что мы отправили ему результаты.\n({result})\n \n\n#Диалог_{telegram_id}"
+                await send_to_chat(bot= bot, user_id= telegram_id, message_text= message_text )
                 sent += 1
                 await asyncio.sleep(0.2)
 
