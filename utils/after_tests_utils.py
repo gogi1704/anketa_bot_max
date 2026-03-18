@@ -5,9 +5,9 @@ import json
 from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
 from maxapi.methods.types.sended_message import SendedMessage
-
-from db.after_tests import after_tests_db as data_base
-from db.after_tests.after_tests_db import sync_tests_job
+from db.anamnez import anamnez_db
+from db.after_tests import after_tests_db
+from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
 from max.max_bot_chat.max_bot_chat_manager import send_to_chat
 
 
@@ -68,9 +68,11 @@ async def replace_wait_with_text(bot:Bot, chat_id: int, wait_msg:SendedMessage, 
 
     if wait_msg and getattr(wait_msg.message.body, "mid", None):
         try:
+            answer_text = f"{answer_text}\n\n\n<<Для ответа отправьте текстовое сообщение или воспользуйтесь кнопкой для возврата в главное меню>>"
             await bot.edit_message(
                 message_id=wait_msg.message.body.mid,
-                text=answer_text
+                text=answer_text,
+                attachments= [kb_go_to_main_menu()]
             )
             return
         except Exception:
@@ -82,7 +84,7 @@ async def replace_wait_with_text(bot:Bot, chat_id: int, wait_msg:SendedMessage, 
                 pass
 
     # fallback
-    await bot.send_message(chat_id=chat_id, text=answer_text)
+    await bot.send_message(chat_id=chat_id, text=answer_text,attachments= [kb_go_to_main_menu()])
 
 
 
@@ -91,7 +93,7 @@ _pending_decode_lock = asyncio.Lock()
 async def process_pending_kind(bot:Bot, kind: str):
 
     kind = str(kind).strip().lower()
-    tasks = await data_base.get_all_pending_by_kind(kind)
+    tasks = await after_tests_db.get_all_pending_by_kind(kind)
 
     MAX_PER_RUN = 300
     sent = 0
@@ -102,11 +104,11 @@ async def process_pending_kind(bot:Bot, kind: str):
 
         if kind == "decode":
 
-            result = await data_base.get_results_only(med_id)
+            result = await after_tests_db.get_results_only(med_id)
             if not result or not str(result).strip():
                 continue
 
-            decode = await data_base.get_decode_only(med_id)
+            decode = await after_tests_db.get_decode_only(med_id)
             if not decode or not str(decode).strip():
                 decode = "Пока нет расшифровки результатов."
 
@@ -117,8 +119,14 @@ async def process_pending_kind(bot:Bot, kind: str):
 
             try:
                 await bot.send_message(chat_id=chat_id, text=text)
-                await data_base.delete_pending_by_id(row_id)
-                message_text = f"Пользователь оставлял заявку на получение консультации по результатам анализов. Только что мы отправили ему результаты.\n({result})\n \n\n#Диалог_{telegram_id}"
+                await after_tests_db.delete_pending_by_id(row_id)
+                user_data = await anamnez_db.get_user(telegram_id)
+                anketa = await  anamnez_db.get_anketa(telegram_id)
+
+                name = user_data["name"] if user_data["name"] else "Не заполнено"
+                age = anketa["age"] if anketa["age"] else -100
+
+                message_text = f"Пользователь (Имя: {name}\nВозраст: {age})\n оставлял заявку на получение консультации по результатам анализов. Только что мы отправили ему результаты.\n({result})\n \n\n#Диалог_{telegram_id}"
                 await send_to_chat(bot= bot, user_id= telegram_id, message_text= message_text )
                 sent += 1
                 await asyncio.sleep(0.2)
@@ -138,7 +146,7 @@ async def pending_decode_job(bot:Bot):
 
 async def scheduler(bot:Bot):
     while True:
-        await sync_tests_job()
+        await after_tests_db.sync_tests_job()
         await pending_decode_job(bot)
         await asyncio.sleep(7200)  # каждые 2 часа
 

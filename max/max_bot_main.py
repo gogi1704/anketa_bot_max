@@ -32,6 +32,12 @@ async def callback_router(event: MessageCallback):
     chat_id, user_id = event.get_ids()
     payload = event.callback.payload
 
+    user_data = await anamnez_db.get_user(user_id)
+    anketa = await  anamnez_db.get_anketa(user_id)
+
+    name = user_data["name"] if user_data["name"] else "Не заполнено"
+    age = anketa["age"] if anketa["age"] else -100
+
     # Закрываем "loading" кнопки
     await event.answer()
 #__________________________________________________________________________________________________
@@ -61,7 +67,7 @@ async def callback_router(event: MessageCallback):
 #__________________________________________________________________________________________________
 
     if payload.startswith("tests_main_menu_"):
-        await handle_after_tests_main_menu(event)
+        await handle_after_tests_main_menu(event, name, age)
         return
 
     if payload.startswith("сheck_up_start_"):
@@ -69,7 +75,7 @@ async def callback_router(event: MessageCallback):
         return
 
     if payload.startswith("tests_decode_"):
-        await handle_decode_yes_no(event)
+        await handle_decode_yes_no(event, name, age)
         return
 
     if payload.startswith("after_good_tests_"):
@@ -77,7 +83,11 @@ async def callback_router(event: MessageCallback):
         return
 
     if payload.startswith("empty_decode_get_"):
-        await handle_empty_decode(event)
+        await handle_empty_decode(event, name, age)
+        return
+
+    if payload.startswith("go_to_main_menu"):
+        await after_tests_main_menu(event)
         return
 
 

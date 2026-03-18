@@ -43,3 +43,9 @@ def kb_tests_decode_empty():
     builder.row(CallbackButton(text="Обратиться к менеджеру", payload="empty_decode_get_manager"))
 
     return builder.as_markup()
+
+def kb_go_to_main_menu():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text= "Главное меню",payload= "go_to_main_menu"))
+
+    return builder.as_markup()

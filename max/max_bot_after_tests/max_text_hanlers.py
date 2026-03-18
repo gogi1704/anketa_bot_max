@@ -1,9 +1,12 @@
 import asyncio
 from maxapi.types import MessageCreated
+
+from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_get_med_id, handle_get_med_id_decode, \
     handle_get_med_id_consult, handle_base_speak, handle_manager_collect, handle_boss_collect
 from max.max_bot_chat import max_bot_cha_manager_after_tests
 from db.after_tests import after_tests_db as db
+from db.anamnez import anamnez_db
 from resources import dialog_states
 
 
@@ -35,6 +38,11 @@ async def handle_text_message_after_tests(event:MessageCreated):
         )
         return
 
+    user_data = await anamnez_db.get_user(user_id)
+    anketa = await  anamnez_db.get_anketa(user_id)
+
+    name = user_data["name"] if user_data["name"] else "Не заполнено"
+    age = anketa["age"] if anketa["age"] else -100
 
 
     if state == dialog_states["after_tests_get_info"]:
@@ -57,7 +65,8 @@ async def handle_text_message_after_tests(event:MessageCreated):
 
         await bot.send_message(
             chat_id=chat_id,
-            text="Дайте знать, если вам что то понадобится"
+            text="Дайте знать, если вам что то понадобится",
+            attachments= [kb_go_to_main_menu()]
         )
         return
 
@@ -65,19 +74,19 @@ async def handle_text_message_after_tests(event:MessageCreated):
         await handle_get_med_id(event)
 
     elif state == dialog_states["get_med_id_decode"]:
-        await handle_get_med_id_decode(event)
+        await handle_get_med_id_decode(event, name, age)
 
     elif state == dialog_states["get_med_id_consult"]:
-        await handle_get_med_id_consult(event)
+        await handle_get_med_id_consult(event, name, age)
 
     elif state == dialog_states["base_speak"]:
-        await handle_base_speak(event, dialog)
+        await handle_base_speak(event, dialog, name, age)
 
     elif state in (dialog_states["med_collect"], dialog_states["manager_collect"]):
-        await handle_manager_collect(event, dialog, state)
+        await handle_manager_collect(event, dialog, state, name, age)
 
     elif state == dialog_states["boss_collect"]:
-        await handle_boss_collect(event, dialog)
+        await handle_boss_collect(event, dialog, name, age)
 
     else:
 
@@ -86,7 +95,7 @@ async def handle_text_message_after_tests(event:MessageCreated):
         # ===============================
         await event.bot.send_message(
             user_id= user_id,
-            text="Для начала завершите текущий сценарий с кнопками или используйте /start."
+            text="Для начала завершите текущий сценарий с кнопками или отправьте боту команду: /start."
         )
 
 async def complete_dialog(user_id: int, last_text: str):

@@ -7,7 +7,7 @@ from maxapi.types import MessageCallback, MessageCreated
 from ai_agents import open_ai_main
 from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYSTEM_PROMPT, BOSS_COLLECT_SYSTEM_PROMPT
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_tests_decode, kb_after_good_tests, \
-    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu
+    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_go_to_main_menu
 from max.max_bot_anamnez.max_bot_navigation import choose_tests
 
 import resources
@@ -35,7 +35,7 @@ async def after_tests_main_menu(event):
         attachments=[tests_keyboards.kb_tests_main_menu()]
     )
 
-async def handle_after_tests_main_menu(event:MessageCallback):
+async def handle_after_tests_main_menu(event:MessageCallback, name, age):
     chat_id, user_id = event.get_ids()
     data = event.callback.payload
     message = event.message
@@ -182,7 +182,7 @@ async def handle_after_tests_main_menu(event:MessageCallback):
                                   chat_id=chat_id,
                                   sleep_time=3)
 
-            await send_manager_get_decode(event, med_id, user_id)
+            await send_manager_get_decode(event, med_id, user_id, name, age)
 
             await db.set_neuro_dialog_states(
                 user_id,
@@ -221,7 +221,7 @@ async def handle_after_tests_main_menu(event:MessageCallback):
                     user_id= user_id,
                     text= resources.TEXT_NEW_MED_CONSULT_YES,
                 )
-                await send_manager_get_consult(event, med_id, doc_url)
+                await send_manager_get_consult(event, med_id, doc_url, name, age)
 
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
@@ -242,7 +242,7 @@ async def handle_after_tests_main_menu(event:MessageCallback):
                     kind="decode"
                 )
 
-                await send_manager_get_consult(event, med_id, doc_url)
+                await send_manager_get_consult(event, med_id, doc_url, name, age)
 
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
@@ -355,7 +355,7 @@ async def handle_get_med_id(event:MessageCreated):
                 attachments= [tests_keyboards.kb_tests_main_menu()]
             )
 
-async def handle_get_med_id_decode(event:MessageCreated):
+async def handle_get_med_id_decode(event:MessageCreated, name, age):
     chat_id, user_id = event.get_ids()
     med_id = event.message.body.text
     number = parse_int(med_id)
@@ -384,7 +384,7 @@ async def handle_get_med_id_decode(event:MessageCreated):
                                   chat_id=chat_id,
                                   sleep_time=3)
 
-            await send_manager_get_decode(event, med_id, user_id)
+            await send_manager_get_decode(event, med_id, user_id, name, age)
             await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
             await event.bot.send_message(
                 user_id= user_id,
@@ -406,7 +406,7 @@ async def handle_get_med_id_decode(event:MessageCreated):
             await event.message.answer(text= resources.TEXT_TEST_IS_HAS_TRUE_DECODE_FALSE,
                                        attachments= [kb_tests_decode_empty()])
 
-async def handle_get_med_id_consult(event:MessageCreated):
+async def handle_get_med_id_consult(event:MessageCreated, name, age):
     chat_id, user_id = event.get_ids()
     med_id = event.message.body.text
     number = parse_int(med_id)
@@ -428,7 +428,7 @@ async def handle_get_med_id_consult(event:MessageCreated):
                                   chat_id=chat_id,
                                   sleep_time=4)
             await after_tests_main_menu(event)
-            await send_manager_get_consult(event, med_id, user_id)
+            await send_manager_get_consult(event, med_id, user_id, name, age)
         else:
             await event.message.answer(text=resources.TEXT_NEW_MED_CONSULT_NO, )
             await write_and_sleep(event=event,
@@ -442,9 +442,9 @@ async def handle_get_med_id_consult(event:MessageCreated):
                 chat_id=chat_id,
                 kind="decode"
             )
-            await send_manager_get_consult(event, med_id, user_id)
+            await send_manager_get_consult(event, med_id, user_id, name, age)
 
-async def handle_base_speak(event:MessageCreated, dialog):
+async def handle_base_speak(event:MessageCreated, dialog, name, age):
     def add(role, msg):
         return dialog + f"\n{role}: {msg}"
 
@@ -615,12 +615,15 @@ async def handle_base_speak(event:MessageCreated, dialog):
 
             await send_manager_get_decode(event= event,
                                           med_id= med_id,
-                                          user_id= user_id)
+                                          user_id= user_id,
+                                          name= name,
+                                          age= age)
 
             await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
             await event.bot.send_message(
                 user_id = user_id,
                 text=resources.TEXT_TESTS_GET_DECODE_FINAL,
+                attachments= [kb_go_to_main_menu()]
             )
 
         else:
@@ -637,7 +640,7 @@ async def handle_base_speak(event:MessageCreated, dialog):
     await replace_wait_with_text(event.bot, chat_id, wait_msg, answer)
     return
 
-async def handle_manager_collect(event:MessageCreated, dialog, state):
+async def handle_manager_collect(event:MessageCreated, dialog, state, name, age):
     def add(role, msg):
         return dialog + f"\n{role}: {msg}"
 
@@ -664,7 +667,7 @@ async def handle_manager_collect(event:MessageCreated, dialog, state):
 
     if result == "complete":
         if state == resources.dialog_states["med_collect"]:
-            text_to_manager = f"Пользователь просит помощи специалиста. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
+            text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит помощи специалиста. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
             await send_to_chat(event,user_id, text_to_manager)
 
             await complete_dialog(user_id= user_id,
@@ -697,7 +700,7 @@ async def handle_manager_collect(event:MessageCreated, dialog, state):
             await asyncio.sleep(2)
             await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
             # Отправка в группу
-            text_to_manager = f"Пользователь просит помощи специалиста. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
+            text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит помощи специалиста. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
             await send_to_chat(event, user_id, text_to_manager)
 
             await event.message.answer(text="Дайте знать, если вам что то понадобится")
@@ -715,7 +718,7 @@ async def handle_manager_collect(event:MessageCreated, dialog, state):
     await replace_wait_with_text(event.bot, chat_id, wait_msg, result)
     return
 
-async def handle_boss_collect(event: MessageCreated, dialog):
+async def handle_boss_collect(event: MessageCreated, dialog, name, age):
     def add(role, msg):
         return dialog + f"\n{role}: {msg}"
 
@@ -738,7 +741,7 @@ async def handle_boss_collect(event: MessageCreated, dialog):
         print("boss_complete")
         await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
         # Отправка в группу
-        text_to_manager = f"Пользователь обращается к руководству. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
+        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n обращается к руководству. У него следующая проблема :{data} \n\n(#Диалог_{user_id}). "
         await send_to_chat(event, user_id, text_to_manager)
         await replace_wait_with_text(event.bot, chat_id, wait_msg, "Спасибо. Ваше обращение передано руководству.")
         await complete_dialog(user_id= user_id,
@@ -776,7 +779,7 @@ async def handle_start_check_up(event:MessageCallback, context_data: MemoryConte
         await choose_tests(event, context_data)
         await msg.delete()
 
-async def handle_decode_yes_no(event:MessageCallback):
+async def handle_decode_yes_no(event:MessageCallback, name, age):
     chat_id, user_id = event.get_ids()
     data = event.callback.payload
 
@@ -785,7 +788,9 @@ async def handle_decode_yes_no(event:MessageCallback):
     if data == "tests_decode_yes":
         await send_manager_get_decode(event= event,
                                       med_id= med_id,
-                                      user_id=user_id)
+                                      user_id=user_id,
+                                      name= name,
+                                      age = age)
         await event.bot.send_message(
             user_id= user_id,
             text= resources.TEXT_SEND_TESTS_TO_DECODE)
@@ -809,7 +814,7 @@ async def handle_decode_yes_no(event:MessageCallback):
 
         await after_tests_main_menu(event=event)
 
-async def handle_empty_decode(event:MessageCallback):
+async def handle_empty_decode(event:MessageCallback, name, age):
     chat_id, user_id = event.get_ids()
     data = event.callback.payload
 
@@ -828,7 +833,7 @@ async def handle_empty_decode(event:MessageCallback):
         )
 
         await event.bot.send_message(user_id=user_id, text=resources.TEXT_TESTS_IS_HAS_TRUE_DECODE)
-        await send_manager_get_decode(event, med_id,user_id)
+        await send_manager_get_decode(event, med_id,user_id, name, age)
         await write_and_sleep(event=event,
                               chat_id=chat_id,
                               sleep_time=3)
@@ -882,24 +887,24 @@ async def handle_after_good_tests_yes_no(event: MessageCallback):
 
 
 
-async def send_manager_get_decode(event, med_id, user_id):
+async def send_manager_get_decode(event, med_id, user_id, name, age):
     doc_url = await db.get_test_results(int(med_id))
     doc_urls = split_urls_from_cell(doc_url)
     if doc_url:
-        text_to_manager = f"Пользователь просит расшифровать анализы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит расшифровать анализы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
     else:
-        text_to_manager = f"Пользователь просит найти его анализы и сделать расшифровку. Вот номер его пробирки: {med_id}\n\n(#Диалог_{user_id})."
+        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит найти его анализы и сделать расшифровку. Вот номер его пробирки: {med_id}\n\n(#Диалог_{user_id})."
     await send_to_chat(event= event,
                        user_id= user_id,
                        message_text= text_to_manager)
 
-async def send_manager_get_consult(event, med_id, user_id):
+async def send_manager_get_consult(event, med_id, user_id, name, age):
     doc_url = await db.get_test_results(int(med_id))
     doc_urls = split_urls_from_cell(doc_url)
     if doc_url:
-        text_to_manager = f"Пользователь просит консультацию по результатам анализов.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит консультацию по результатам анализов.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
     else:
-        text_to_manager = f"Пользователь просит консультацию по результатам анализов.Анализы не найдены в таблице.\n Вот номер его пробирки: {med_id}\n\n(#Диалог_{user_id})."
+        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n консультацию по результатам анализов.Анализы не найдены в таблице.\n Вот номер его пробирки: {med_id}\n\n(#Диалог_{user_id})."
     await send_to_chat(event=event,
                        user_id=user_id,
                        message_text=text_to_manager)
