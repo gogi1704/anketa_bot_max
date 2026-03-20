@@ -48,7 +48,7 @@ async def handle_text_message_after_tests(event:MessageCreated):
     if state == dialog_states["after_tests_get_info"]:
 
         text_to_manager = (
-            f"У пользователя все в порядке с анализами, "
+            f"У Пользователя (Имя: {name}\nВозраст: {age})\n все в порядке с анализами, "
             f"но он хочет поговорить со специалистом.\n"
             f"Описание: {text}\n\n(#Диалог_{user_id})"
         )

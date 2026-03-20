@@ -39,7 +39,7 @@ async def callback_router(event: MessageCallback):
     age = anketa["age"] if anketa["age"] else -100
 
     # Закрываем "loading" кнопки
-    await event.answer()
+    # await event.answer()
 #__________________________________________________________________________________________________
     # ===== CONSENT =====
     if payload in ("consent_yes", "consent_no"):

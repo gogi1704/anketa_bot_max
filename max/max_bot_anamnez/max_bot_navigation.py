@@ -685,6 +685,7 @@ async def choose_tests(event: MessageCallback, context_data: MemoryContext):
 
 async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
     state = await context_data.get_state()
+    chat_id, user_id = event.get_ids()
     if state != "SELECTING_TESTS":
         return None
 
@@ -715,14 +716,13 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
 
         if not selected:
             await event.bot.send_message(
-                chat_id=event.from_user.id,
+                chat_id= chat_id,
                 text="Выберите хотя бы один анализ."
             )
             return None
 
         chosen_names = [resources.TESTS[i] for i in selected]
         chosen_str = ", ".join(chosen_names)
-        chat_id,user_id = event.get_ids()
 
         # получаем данные из БД (они постоянные)
         user_data = await anamnez_db.get_user(user_id=user_id)

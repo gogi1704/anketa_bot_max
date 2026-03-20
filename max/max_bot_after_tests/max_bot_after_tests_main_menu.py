@@ -221,7 +221,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
                     user_id= user_id,
                     text= resources.TEXT_NEW_MED_CONSULT_YES,
                 )
-                await send_manager_get_consult(event, med_id, doc_url, name, age)
+                await send_manager_get_consult(event, med_id, user_id, name, age)
 
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
@@ -242,7 +242,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
                     kind="decode"
                 )
 
-                await send_manager_get_consult(event, med_id, doc_url, name, age)
+                await send_manager_get_consult(event, med_id, user_id, name, age)
 
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
