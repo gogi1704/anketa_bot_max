@@ -530,6 +530,14 @@ async def get_from_manager(telegram_id: int) -> str | None:
             row = await cursor.fetchone()
             return row[0] if row and row[0] else None
 
+async def delete_user_users_max(telegram_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            "DELETE FROM users_max WHERE telegram_id = ?",
+            (telegram_id,)
+        )
+        await db.commit()
+
 
 # =========================================================
 # NEURO_DIALOG_STATE

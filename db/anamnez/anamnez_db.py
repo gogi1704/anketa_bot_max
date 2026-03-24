@@ -696,3 +696,19 @@ async def deactivate_key(api_key: str):
         print(f"Не удалось синхронизировать ключи: {e}")
 
 
+
+async def delete_user_full(user_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.executescript(f"""
+            DELETE FROM user_data WHERE user_id = {user_id};
+            DELETE FROM user_anketa WHERE user_id = {user_id};
+            DELETE FROM anketa_state WHERE user_id = {user_id};
+            DELETE FROM dialog_states WHERE user_id = {user_id};
+            DELETE FROM user_reply_state WHERE user_id = {user_id};
+            DELETE FROM user_answer_state WHERE user_id = {user_id};
+            DELETE FROM message_links WHERE user_id = {user_id};
+            DELETE FROM patient_dialogs WHERE telegram_id = {user_id};
+        """)
+        await db.commit()
+
+    print(f"[🗑 DEBUG] Полностью удалён user_id={user_id}")

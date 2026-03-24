@@ -14,6 +14,7 @@ from utils.anketa_utils import *
 from maxapi.types.attachments.buttons import MessageButton, CallbackButton
 from max.max_bot_chat import max_bot_chat_manager
 from db.anamnez import anamnez_db
+from db.after_tests import after_tests_db
 
 BACK_BUTTON = "⬅️ Назад"
 image_path = Path(__file__).parent.parent / "images" / "image_andrey.jpg"
@@ -21,17 +22,11 @@ image_path = Path(__file__).parent.parent / "images" / "image_andrey.jpg"
 
 async def clear_all(event: MessageCreated):
     """Очистка всех данных пользователя и перезапуск стартового сценария"""
-    # Показываем «печатает…»
     chat_id, user_id = event.get_ids()
-    await event.bot.send_action(
-        chat_id= chat_id,
-        action= SenderAction.TYPING_ON
-    )
-
-    await anamnez_db.delete_dialog(user_id)
-    await anamnez_db.delete_user(user_id)
-    await anamnez_db.delete_user_reply_state(user_id)
-    await anamnez_db.delete_anketa(user_id)
+    await  event.bot.send_message(chat_id=chat_id, text= "Начат процесс очистки" )
+    await asyncio.sleep(2)
+    await anamnez_db.delete_user_full(user_id)
+    await after_tests_db.delete_user_users_max(user_id)
 
     # Перезапускаем стартовый сценарий
     await start(event)
