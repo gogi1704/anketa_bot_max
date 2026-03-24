@@ -240,6 +240,189 @@ async def start_anketa(event: MessageCreated):
     # 4️⃣ Отправляем первый вопрос
     await ask_question(event, pos=0, questions=questions)
 
+# async def anketa_dialog(event: MessageCreated):
+#     chat_id, user_id = event.get_ids()
+#     text = event.message.body.text
+#
+#     # Имитация печати
+#     await event.bot.send_action(
+#         chat_id=chat_id,
+#         action=SenderAction.TYPING_ON
+#     )
+#
+#     # Получаем состояние из БД
+#     state = await anamnez_db.get_user_state(user_id)
+#     pos = state["position"]
+#     answers = state["answers"]
+#     mode = state["mode"]
+#
+#     # Определяем набор вопросов
+#     if mode == "anketa_osmotr":
+#         questions = resources.QUESTIONS
+#         questions_small = resources.QUESTIONS_SMALL
+#     else:
+#         questions = resources.QUESTIONS_IF_NOT_OSMOTR
+#         questions_small = resources.QUESTIONS_SMALL_IF_NOT_OSMOTR
+#
+#     # ===== КНОПКА НАЗАД =====
+#     if text == BACK_BUTTON:
+#         if pos > 0:
+#             pos -= 1
+#             if answers:
+#                 answers.pop()
+#
+#             await anamnez_db.set_user_state(user_id, {
+#                 "position": pos,
+#                 "answers": answers,
+#                 "mode": mode
+#             })
+#
+#         await ask_question(event, pos, questions)
+#         return
+#
+#     # ===== ВАЛИДАЦИЯ =====
+#     result = await util_fins.validate_anketa_questions(
+#         position=pos,
+#         user_say=text,
+#         user_id= user_id,
+#         bot= event.bot
+#     )
+#
+#     if pos != 12:
+#         if result == "empty":
+#             await event.message.answer(
+#                 "Для ответа выберите один из вариантов, нажав на соответствующую кнопку!"
+#             )
+#             return
+#
+#         if result != "complete":
+#             await event.message.answer(result)
+#             return
+#         answers.append(text)
+#
+#
+#
+#     if pos == 12:
+#         if "complete" in result:
+#             answers.append(result)
+#         else:
+#             await event.message.answer(result)
+#             return
+#
+#
+#
+#
+#     pos += 1
+#
+#     # ===== ЕЩЁ ЕСТЬ ВОПРОСЫ =====
+#     if pos < len(questions):
+#         await anamnez_db.set_user_state(user_id, {
+#             "position": pos,
+#             "answers": answers,
+#             "mode": mode
+#         })
+#
+#         await ask_question(event, pos, questions)
+#         return
+#
+#     # ===== АНКЕТА ЗАВЕРШЕНА =====
+#
+#     # Сохраняем финальное состояние
+#     await anamnez_db.set_user_state(user_id, {
+#         "position": pos,
+#         "answers": answers,
+#         "mode": None
+#     })
+#
+#     await anamnez_db.save_user_reply_state(
+#         user_id,
+#         manager_msg_id=resources.STATES_USERS_FINALS['final_anketa']
+#     )
+#
+#     await event.message.answer("⏳ Анализирую анкету...")
+#
+#     try:
+#         # Сохраняем анкету в БД
+#         await add_to_anketa(event, answers)
+#
+#         # Формируем текст анкеты
+#         anketa_text = "\n".join(
+#             f"{i + 1}. {q} — {a}"
+#             for i, (q, a) in enumerate(zip(questions_small, answers))
+#         )
+#
+#         # Запрос к GPT
+#         user_prompt = prompts.user_prompt_new_rec_tests.format(
+#             anketa=anketa_text
+#         )
+#
+#         recs = await get_gpt_answer(
+#             system_prompt=prompts.system_prompt_new_rec_tests,
+#             user_prompt=user_prompt,
+#             bot=event
+#         )
+#
+#         risks, recommendations_list, rec_text = ai_utils.extract_recs(recs)
+#
+#         # ===== ЕСЛИ ЕСТЬ РЕКОМЕНДАЦИИ =====
+#         if recommendations_list:
+#
+#             await event.message.answer(
+#                 f"Проанализировав ваши ответы, я выявил некоторые риски:\n{risks}\n"
+#             )
+#
+#             await asyncio.sleep(5)
+#
+#             await event.message.answer(
+#                 "На основе этого анализа я сформировал ПЕРСОНАЛЬНУЮ РЕКОМЕНДАЦИЮ.\n"
+#                 f"Вам полезно пройти комплекс исследований:\n{rec_text}"
+#             )
+#
+#             await asyncio.sleep(2)
+#
+#             await event.message.answer(
+#                 "Также вы можете выбрать любой из представленных комплексов услуг.\n"
+#                 "Ознакомиться можно по ссылке:\n"
+#                 f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
+#             )
+#
+#             await asyncio.sleep(2)
+#             keyboard_builder = InlineKeyboardBuilder()
+#             keyboard_builder.row(CallbackButton(text = "Да", payload="dop_yes"),
+#                                 CallbackButton(text = "Нет", payload="dop_no"))
+#
+#             await event.message.answer(
+#                 resources.by_dop_tests_or_not_text,
+#                 attachments= [keyboard_builder.as_markup()]
+#             )
+#
+#         # ===== ЕСЛИ РЕКОМЕНДАЦИЙ НЕТ =====
+#         else:
+#             await anamnez_db.append_answer(
+#                 telegram_id=user_id,
+#                 text=f"Терапевт сказал:{resources.is_has_complaint_text}"
+#             )
+#
+#             await anamnez_db.set_dialog_state(
+#                 user_id,
+#                 resources.dialog_states_dict["is_has_complaint"]
+#             )
+#
+#             await event.message.answer(
+#                 resources.is_has_complaint_text
+#             )
+#
+#     finally:
+#         # Удаляем сообщение ожидания
+#         try:
+#             # await event.bot.delete_message(
+#             #     chat_id=chat_id,
+#             #     message_id=wait_msg.id
+#             # )
+#             print("E")
+#         except Exception:
+#             pass
+
 async def anketa_dialog(event: MessageCreated):
     chat_id, user_id = event.get_ids()
     text = event.message.body.text
@@ -422,7 +605,6 @@ async def anketa_dialog(event: MessageCreated):
             print("E")
         except Exception:
             pass
-
 
 async def ask_question(event: MessageCreated, pos: int, questions: list[str]):
     chat_id, user_id = event.get_ids()
