@@ -2,7 +2,117 @@ import random
 from utils.anketa_utils import *
 from maxapi.context import MemoryContext
 from db.anamnez import anamnez_db
+import json
+from typing import List, Dict, Union
 
+
+def parse_health_issues(response_text: str) -> List[Dict[str, Union[str, float]]]:
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError:
+        raise ValueError("Невалидный JSON")
+
+    if not isinstance(data, dict):
+        raise ValueError("Ответ должен быть объектом")
+
+    issues = data.get("issues")
+
+    if issues is None:
+        raise ValueError("Отсутствует поле 'issues'")
+
+    if not isinstance(issues, list):
+        raise ValueError("'issues' должен быть списком")
+
+    parsed_issues = []
+
+    for item in issues:
+        if not isinstance(item, dict):
+            continue
+
+        issue_type = item.get("type")
+        reason = item.get("reason")
+
+        if issue_type not in {"overweight", "blood_pressure"}:
+            continue
+
+        # Проверка типов
+        if issue_type == "overweight" and not isinstance(reason, (int, float)):
+            continue
+
+        if issue_type == "blood_pressure" and not isinstance(reason, str):
+            continue
+
+        parsed_issues.append({
+            "type": issue_type,
+            "reason": reason
+        })
+
+    return parsed_issues
+
+
+def parse_another_problem(response_text: str):
+    """
+    Парсит JSON-ответ агента по жалобам пользователя.
+
+    Возвращает словарь с ключами:
+    - answer: str ("all_right", "complete" или текст вопроса)
+    - complaint: Optional[str]
+    - duration: Optional[str]
+    - actions_taken: Optional[str]
+
+    Если JSON некорректный или отсутствует answer, выбрасывает ValueError.
+    """
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Невалидный JSON: {e}")
+
+    if not isinstance(data, dict):
+        raise ValueError("Ответ должен быть JSON-объектом")
+
+    answer = data.get("answer")
+    if not answer:
+        raise ValueError("В JSON нет поля 'answer'")
+
+    # Проверяем наличие полей только если answer == "complete"
+    complaint = data.get("complaint") if answer == "complete" else None
+    duration = data.get("duration") if answer == "complete" else None
+    actions_taken = data.get("actions_taken") if answer == "complete" else None
+
+    # Для safety: если answer == complete, но хотя бы одно поле отсутствует — warning
+    if answer == "complete":
+        missing = []
+        for key, val in [("complaint", complaint), ("duration", duration), ("actions_taken", actions_taken)]:
+            if val is None:
+                missing.append(key)
+        if missing:
+            raise ValueError(f"Не хватает полей для 'complete': {', '.join(missing)}")
+
+    return {
+        "answer": answer,
+        "complaint": complaint,
+        "duration": duration,
+        "actions_taken": actions_taken
+    }
+
+def parse_agent_fatigue_answer(response_text: str) :
+    """
+    Парсит JSON-ответ агента и возвращает значение поля 'answer'.
+    Если JSON некорректный или нет поля 'answer', выбрасывает исключение.
+    """
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Невалидный JSON: {e}")
+
+    if not isinstance(data, dict):
+        raise ValueError("Ответ должен быть JSON-объектом")
+
+    answer = data.get("answer")
+    if answer is None:
+        raise ValueError("В JSON нет поля 'answer'")
+
+    return answer
 
 def normalize_name(text: str) -> str:
     return ' '.join(word.capitalize() for word in text.strip().split())

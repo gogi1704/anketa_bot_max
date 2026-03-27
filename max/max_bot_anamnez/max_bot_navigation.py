@@ -6,10 +6,11 @@ from maxapi.enums.sender_action import SenderAction
 from maxapi.types import BotStarted
 from maxapi.types import MessageCreated, MessageCallback
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+
+from max.max_bot_after_tests import max_bot_after_tests_main_menu
 from utils import util_fins
 import asyncio
 from ai_agents.open_ai_main import get_gpt_answer
-from ai_agents import ai_utils
 from utils.anketa_utils import *
 from maxapi.types.attachments.buttons import MessageButton, CallbackButton
 from max.max_bot_chat import max_bot_chat_manager
@@ -123,7 +124,7 @@ async def start(event: MessageCreated):
         attachments=[builder.as_markup()]
     )
 
-async def handle_text_message_anamnez(event: MessageCreated):
+async def handle_text_message_anamnez(event: MessageCreated, context_data: MemoryContext):
     text = event.message.body.text
     if not text:
         return
@@ -154,7 +155,7 @@ async def handle_text_message_anamnez(event: MessageCreated):
 
     # FSM логика
     if state == resources.dialog_states_dict["anketa"]:
-        await anketa_dialog(event)
+        await anketa_dialog(event, context_data)
 
     elif state == resources.dialog_states_dict['get_name']:
         await name_dialog(event)
@@ -162,8 +163,18 @@ async def handle_text_message_anamnez(event: MessageCreated):
     # elif state == resources.dialog_states_dict['medosmotr_in_company']:
     #     await medosmotr_in_company_dialog(event)
 
-    # elif state == resources.dialog_states_dict['is_has_complaint']:
-    #     await is_has_complaint_dialog(event)
+    elif state == resources.dialog_states_dict['new_branch_perfect_analyze']:
+        await new_branch_dialog_fatigue(event, context_data)
+
+    elif state == resources.dialog_states_dict['new_branch_overweight']:
+        await new_branch_dialog_overweight(event, context_data)
+
+    elif state == resources.dialog_states_dict['new_branch_blood_pressure']:
+        await new_branch_dialog_blood_pressure(event, context_data)
+
+    elif state == resources.dialog_states_dict['new_branch_another_problems']:
+        await new_branch_dialog_another_problems(event)
+
     #
     # elif state == resources.dialog_states_dict['terapevt_consult']:
     #     await terapevt_consult_dialog(event)
@@ -239,6 +250,260 @@ async def start_anketa(event: MessageCreated):
 
     # 4️⃣ Отправляем первый вопрос
     await ask_question(event, pos=0, questions=questions)
+
+async def new_branch_dialog_fatigue(event: MessageCreated, context_data: MemoryContext):
+    chat_id, user_id = event.get_ids()
+    dialog = await anamnez_db.get_dialog(user_id)
+    await event.bot.send_action(
+        chat_id=chat_id,
+        action=SenderAction.TYPING_ON
+    )
+    user_prompt = prompts.user_prompt_agent_fatigue.format(dialog = dialog)
+
+    agent_text = await get_gpt_answer(system_prompt= prompts.system_prompt_agent_fatique,
+                                      user_prompt= user_prompt,
+                                      bot= event.bot)
+    agent_answer = util_fins.parse_agent_fatigue_answer(agent_text)
+
+
+    if agent_answer is None:
+        await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
+    elif agent_answer == "all_right":
+        await anamnez_db.append_answer(telegram_id=user_id,
+                                       text=f"Медицинский ассистент сказал: {resources.text_new_branch_another_problems}")
+        await anamnez_db.set_dialog_state(
+            user_id,
+            resources.dialog_states_dict["new_branch_another_problems"]
+        )
+
+        await event.message.answer(text= resources.text_new_branch_another_problems)
+
+
+    elif agent_answer == "complete":
+        context = await context_data.get_data()
+        has_overweight = context.get("has_overweight")
+        has_blood_pressure = context.get("has_blood_pressure")
+        answer_text = f"{resources.text_new_branch_fatigue_complete}"
+        if has_overweight:
+            answer_text += "\nВ анкете были выявлены признаки избыточного веса. Рекомендуем также добавить чек-ап «Лишний вес»"
+        if has_blood_pressure:
+            answer_text += "\nВ анкете было выявлено повышенное давление. Рекомендуем также добавить чек-ап «Липидный обмен»"
+
+        answer_text += "\nВыберите чек-ап из списка и сделайте шаг к своему здоровью."
+
+        await anamnez_db.append_answer(telegram_id= user_id, text = f"Медицинский ассистент сказал: {answer_text}")
+        await event.message.answer(text=answer_text)
+        await asyncio.sleep(4)
+
+        await event.message.answer(
+            "Также вы можете выбрать любой из представленных комплексов услуг.\n"
+            "Ознакомиться можно по ссылке:\n"
+            f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
+            )
+        await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
+        await asyncio.sleep(3)
+
+        keyboard_builder = InlineKeyboardBuilder()
+        keyboard_builder.row(CallbackButton(text = "Да", payload="dop_yes"),
+                                     CallbackButton(text = "Нет", payload="dop_no"))
+        await event.message.answer(
+            text= resources.text_new_branch_go_to_tests,
+            attachments= [keyboard_builder.as_markup()]
+            )
+
+        
+    else:
+        await anamnez_db.append_answer(telegram_id= user_id, text = f"Медицинский ассистент сказал: {agent_answer}")
+        await event.message.answer(text= agent_answer)
+
+async def new_branch_dialog_overweight(event: MessageCreated,context_data: MemoryContext):
+    chat_id, user_id = event.get_ids()
+    dialog = await anamnez_db.get_dialog(user_id)
+    await event.bot.send_action(
+        chat_id=chat_id,
+        action=SenderAction.TYPING_ON
+    )
+    user_prompt = prompts.user_prompt_agent_overweight.format(dialog = dialog)
+    agent_text = await get_gpt_answer(system_prompt= prompts.system_prompt_agent_overweight,
+                                      user_prompt= user_prompt,
+                                      bot= event.bot)
+    agent_answer = util_fins.parse_agent_fatigue_answer(agent_text)
+
+    if agent_answer is None:
+        await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
+    elif agent_answer == "all_right":
+
+        await anamnez_db.append_answer(
+            telegram_id=user_id,
+            text=f"Медицинский ассистент сказал:{resources.text_new_branch_perfect_analyze_short}"
+        )
+
+        await anamnez_db.set_dialog_state(
+            user_id,
+            resources.dialog_states_dict["new_branch_perfect_analyze"]
+        )
+
+        await event.message.answer(
+            resources.text_new_branch_perfect_analyze_short
+        )
+
+
+    elif agent_answer == "complete":
+        context = await context_data.get_data()
+        has_blood_pressure = context.get("has_blood_pressure")
+        answer_text = f"{resources.text_new_branch_overweight_complete}"
+        if has_blood_pressure:
+            answer_text += "\nВ анкете было выявлено повышенное давление. Рекомендуем также добавить чек-ап «Липидный обмен»"
+
+        answer_text += "\nВыберите чек-ап из списка и сделайте шаг к своему здоровью."
+
+        await anamnez_db.append_answer(telegram_id=user_id,
+                                       text=f"Медицинский ассистент сказал: {answer_text}")
+        await event.message.answer(text=answer_text)
+        await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
+        await asyncio.sleep(4)
+
+        await event.message.answer(
+            "Также вы можете выбрать любой из представленных комплексов услуг.\n"
+            "Ознакомиться можно по ссылке:\n"
+            f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
+            )
+        await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
+        await asyncio.sleep(3)
+
+        keyboard_builder = InlineKeyboardBuilder()
+        keyboard_builder.row(CallbackButton(text="Да", payload="dop_yes"),
+                             CallbackButton(text="Нет", payload="dop_no"))
+        await event.message.answer(
+            text=resources.text_new_branch_go_to_tests,
+            attachments=[keyboard_builder.as_markup()]
+        )
+
+
+    else:
+        await anamnez_db.append_answer(telegram_id=user_id, text=f"Медицинский ассистент сказал: {agent_answer}")
+        await event.message.answer(text=agent_answer)
+
+async def new_branch_dialog_blood_pressure(event: MessageCreated, context_data: MemoryContext):
+    chat_id, user_id = event.get_ids()
+    dialog = await anamnez_db.get_dialog(user_id)
+    await event.bot.send_action(chat_id=chat_id,action=SenderAction.TYPING_ON)
+
+    user_prompt = prompts.user_prompt_agent_blood_pressure.format(dialog = dialog)
+    agent_text = await get_gpt_answer(system_prompt= prompts.system_prompt_agent_blood_pressure,
+                                      user_prompt= user_prompt,
+                                      bot= event.bot)
+    agent_answer = util_fins.parse_agent_fatigue_answer(agent_text)
+
+    if agent_answer is None:
+        await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
+    elif agent_answer == "all_right":
+        await anamnez_db.append_answer(
+            telegram_id=user_id,
+            text=f"Медицинский ассистент сказал:{resources.text_new_branch_perfect_analyze_short}"
+        )
+
+        await anamnez_db.set_dialog_state(
+            user_id,
+            resources.dialog_states_dict["new_branch_perfect_analyze"]
+        )
+        await anamnez_db.delete_dialog(user_id)
+
+        await event.message.answer(
+            resources.text_new_branch_perfect_analyze_short
+        )
+
+
+    elif agent_answer == "complete":
+        context = await context_data.get_data()
+        has_overweight = context.get("has_overweight")
+        answer_text = f"{resources.text_new_branch_blood_pressure_complete}"
+        if has_overweight:
+            answer_text += "\nВ анкете были выявлены признаки избыточного веса. Рекомендуем также добавить чек-ап «Лишний вес»"
+        answer_text += "\nВыберите чек-ап из списка и сделайте шаг к своему здоровью."
+
+        await anamnez_db.append_answer(telegram_id=user_id,
+                                       text=f"Медицинский ассистент сказал: {answer_text}")
+        await event.message.answer(text= answer_text)
+        await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
+        await asyncio.sleep(4)
+
+        await event.message.answer(
+            "Также вы можете выбрать любой из представленных комплексов услуг.\n"
+            "Ознакомиться можно по ссылке:\n"
+            f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
+            )
+        await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
+        await asyncio.sleep(3)
+
+        keyboard_builder = InlineKeyboardBuilder()
+        keyboard_builder.row(CallbackButton(text="Да", payload="dop_yes"),
+                             CallbackButton(text="Нет", payload="dop_no"))
+        await event.message.answer(
+            text=resources.text_new_branch_go_to_tests,
+            attachments=[keyboard_builder.as_markup()]
+        )
+
+    else:
+        await anamnez_db.append_answer(telegram_id=user_id, text=f"Медицинский ассистент сказал: {agent_answer}")
+        await event.message.answer(text=agent_answer)
+
+async def new_branch_dialog_another_problems(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+    dialog = await anamnez_db.get_dialog(user_id)
+    await event.bot.send_action(
+        chat_id=chat_id,
+        action=SenderAction.TYPING_ON
+    )
+    user_prompt = prompts.user_prompt_agent_another_problems.format(dialog = dialog)
+    agent_text = await get_gpt_answer(system_prompt= prompts.system_prompt_agent_another_problems,
+                                      user_prompt= user_prompt,
+                                      bot= event.bot)
+    agent_answer = util_fins.parse_agent_fatigue_answer(agent_text)
+
+    if agent_answer is None:
+        await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
+
+    elif agent_answer == "all_right":
+        await anamnez_db.append_answer(telegram_id=user_id,
+                                       text=f"Медицинский ассистент сказал: {resources.text_new_branch_another_problem_all_right}")
+        await anamnez_db.set_dialog_state(
+            user_id,
+            resources.dialog_states_dict["new_branch_another_problems"]
+        )
+        await event.message.answer(text=resources.text_new_branch_another_problem_all_right)
+        await asyncio.sleep(3)
+
+        keyboard_builder = InlineKeyboardBuilder()
+        keyboard_builder.row(CallbackButton(text="Да", payload="dop_yes"),
+                             CallbackButton(text="Нет", payload="dop_no"))
+        await event.message.answer(
+            text=resources.text_new_branch_go_to_tests,
+            attachments=[keyboard_builder.as_markup()]
+        )
+
+    elif agent_answer == "complete":
+        # await anamnez_db.append_answer(telegram_id=user_id,
+        #                                text=f"Медицинский ассистент сказал: {resources.text_new_branch_blood_pressure_complete}")
+        user_data = await anamnez_db.get_user(user_id=user_id)
+        await event.message.answer(text=resources.text_new_branch_another_problem_complete)
+
+        text_to_manager = (
+            f"Пользователь: {user_data['name']} (ID- {user_id}).\n"
+            f"Оставил жалобу:\n{dialog}"
+            f"\n\n\n#Диалог_{user_id}"
+        )
+
+        await event.message.answer(text=f"Вот такое отправится менеджеру: {text_to_manager}\n\n\n Чтобы заново пройти анкетирование введите команду /clear_and_restart")
+
+        # await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
+        await asyncio.sleep(3)
+
+        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+
+    else:
+        await anamnez_db.append_answer(telegram_id=user_id, text=f"Медицинский ассистент сказал: {agent_answer}")
+        await event.message.answer(text=agent_answer)
 
 # async def anketa_dialog(event: MessageCreated):
 #     chat_id, user_id = event.get_ids()
@@ -423,7 +688,7 @@ async def start_anketa(event: MessageCreated):
 #         except Exception:
 #             pass
 
-async def anketa_dialog(event: MessageCreated):
+async def anketa_dialog(event: MessageCreated,  context_data: MemoryContext):
     chat_id, user_id = event.get_ids()
     text = event.message.body.text
 
@@ -492,9 +757,6 @@ async def anketa_dialog(event: MessageCreated):
             await event.message.answer(result)
             return
 
-
-
-
     pos += 1
 
     # ===== ЕЩЁ ЕСТЬ ВОПРОСЫ =====
@@ -535,65 +797,72 @@ async def anketa_dialog(event: MessageCreated):
         )
 
         # Запрос к GPT
-        user_prompt = prompts.user_prompt_new_rec_tests.format(
+        user_prompt = prompts.user_prompt_new_analyze.format(
             anketa=anketa_text
         )
 
-        recs = await get_gpt_answer(
-            system_prompt=prompts.system_prompt_new_rec_tests,
+        analyze_gpt_result = await get_gpt_answer(
+            system_prompt=prompts.system_prompt_new_analyze,
             user_prompt=user_prompt,
             bot=event
         )
 
-        risks, recommendations_list, rec_text = ai_utils.extract_recs(recs)
+        analyze_result = util_fins.parse_health_issues(analyze_gpt_result)
+        has_overweight = any(i["type"] == "overweight" for i in analyze_result)
+        has_blood_pressure = any(i["type"] == "blood_pressure" for i in analyze_result)
 
-        # ===== ЕСЛИ ЕСТЬ РЕКОМЕНДАЦИИ =====
-        if recommendations_list:
+        if len(analyze_result) > 0:
+            await context_data.set_state("rec_tests")
+            await context_data.set_data({
+                "has_overweight": has_overweight,
+                "has_blood_pressure": has_blood_pressure,
+            })
 
-            await event.message.answer(
-                f"Проанализировав ваши ответы, я выявил некоторые риски:\n{risks}\n"
-            )
-
-            await asyncio.sleep(5)
-
-            await event.message.answer(
-                "На основе этого анализа я сформировал ПЕРСОНАЛЬНУЮ РЕКОМЕНДАЦИЮ.\n"
-                f"Вам полезно пройти комплекс исследований:\n{rec_text}"
-            )
-
-            await asyncio.sleep(2)
-
-            await event.message.answer(
-                "Также вы можете выбрать любой из представленных комплексов услуг.\n"
-                "Ознакомиться можно по ссылке:\n"
-                f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
-            )
-
-            await asyncio.sleep(2)
-            keyboard_builder = InlineKeyboardBuilder()
-            keyboard_builder.row(CallbackButton(text = "Да", payload="dop_yes"),
-                                CallbackButton(text = "Нет", payload="dop_no"))
-
-            await event.message.answer(
-                resources.by_dop_tests_or_not_text,
-                attachments= [keyboard_builder.as_markup()]
-            )
-
-        # ===== ЕСЛИ РЕКОМЕНДАЦИЙ НЕТ =====
-        else:
+        if len(analyze_result) == 0:
             await anamnez_db.append_answer(
                 telegram_id=user_id,
-                text=f"Терапевт сказал:{resources.is_has_complaint_text}"
+                text=f"Терапевт сказал:{resources.text_new_branch_perfect_analyze}"
             )
 
             await anamnez_db.set_dialog_state(
                 user_id,
-                resources.dialog_states_dict["is_has_complaint"]
+                resources.dialog_states_dict["new_branch_perfect_analyze"]
             )
 
             await event.message.answer(
-                resources.is_has_complaint_text
+                resources.text_new_branch_perfect_analyze
             )
+
+        elif has_overweight:
+            await anamnez_db.append_answer(
+                telegram_id=user_id,
+                text=f"Терапевт сказал:{resources.text_new_branch_overweight}"
+            )
+
+            await anamnez_db.set_dialog_state(
+                user_id,
+                resources.dialog_states_dict["new_branch_overweight"]
+            )
+
+            await event.message.answer(
+                resources.text_new_branch_overweight
+            )
+
+        elif has_blood_pressure:
+            await anamnez_db.append_answer(
+                telegram_id=user_id,
+                text=f"Терапевт сказал:{resources.text_new_branch_blood_pressure}"
+            )
+
+            await anamnez_db.set_dialog_state(
+                user_id,
+                resources.dialog_states_dict["new_branch_blood_pressure"]
+            )
+
+            await event.message.answer(
+                resources.text_new_branch_blood_pressure
+            )
+
 
     finally:
         # Удаляем сообщение ожидания
@@ -838,6 +1107,9 @@ def build_tests_keyboard(selected_indexes: set[int]):
     keyboard_builder.row(
         CallbackButton(text="ГОТОВО", payload="done")
     )
+    keyboard_builder.row(
+        CallbackButton(text="Не хочу проходить обследования", payload="skip_tests")
+    )
 
     return keyboard_builder.as_markup()
 
@@ -927,7 +1199,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             f"Обследования: {chosen_str}"
         )
 
-        await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
+        # await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
 
         # удаляем сообщение с кнопками
         try:
@@ -963,6 +1235,17 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         await asyncio.sleep(5)
         await context_data.clear()
         return "after_tests_start"
+
+    elif payload == "skip_tests":
+        try:
+            await event.bot.delete_message(
+                message_id=message_id
+            )
+        except Exception as e:
+            print(f"Ошибка удаления сообщения: {e}")
+
+        return "after_tests_start"
+
     return None
 
 

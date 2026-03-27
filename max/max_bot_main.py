@@ -1,8 +1,6 @@
 import os
 import logging
 from dotenv import load_dotenv
-
-from db.after_tests import after_tests_db
 from db.db_utils import update_db
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from max.max_bot_chat import max_bot_cha_manager_after_tests
@@ -47,7 +45,7 @@ async def callback_router(event: MessageCallback):
         return
 
     # ===== TOGGLE =====
-    if payload.startswith("toggle:") or payload == "done":
+    if payload.startswith("toggle:") or payload == "done" or payload == "skip_tests":
         is_after_tests =  await handle_toggle(event, context_manager.get(chat_id, user_id))
         if is_after_tests:
             await after_tests_main_menu(event)
@@ -59,7 +57,7 @@ async def callback_router(event: MessageCallback):
         return
 
     if payload.startswith("dopDop_"):
-        is_after_tests = await handle_dopDop_analizy(event,context_manager.get(chat_id, user_id))
+        is_after_tests = await handle_dopDop_analizy(event, context_manager.get(chat_id, user_id))
         if is_after_tests:
             await after_tests_main_menu(event)
         return
@@ -162,7 +160,7 @@ async def text_handler(event: MessageCreated):
         await handle_text_message_after_tests(event)
         return
 
-    await handle_text_message_anamnez(event)
+    await handle_text_message_anamnez(event, context_manager.get(chat_id, user_id))
 
 
 async def main():
