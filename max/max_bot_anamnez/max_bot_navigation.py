@@ -494,9 +494,9 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
             f"\n\n\n#Диалог_{user_id}"
         )
 
-        await event.message.answer(text=f"Вот такое отправится менеджеру: {text_to_manager}\n\n\n Чтобы заново пройти анкетирование введите команду /clear_and_restart")
+        # await event.message.answer(text=f"Вот такое отправится менеджеру: {text_to_manager}\n\n\n Чтобы заново пройти анкетирование введите команду /clear_and_restart")
 
-        # await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
+        await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
         await asyncio.sleep(3)
 
         await max_bot_after_tests_main_menu.after_tests_main_menu(event)
@@ -1199,7 +1199,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             f"Обследования: {chosen_str}"
         )
 
-        # await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
+        await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
 
         # удаляем сообщение с кнопками
         try:
@@ -1224,17 +1224,18 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             manager_msg_id=resources.STATES_USERS_FINALS['victory']
         )
 
+        builder = InlineKeyboardBuilder()
+        builder.row(CallbackButton(text="Оплатить онлайн", payload="pay_yes"),
+                    CallbackButton(text="Оплатить позже", payload="pay_no"))
+        await context_data.clear()
         await event.bot.send_message(
             chat_id=chat_id,
             text=resources.get_final_text_tests_with_price2(
                 tests=text,
                 price=price
-            )
+            ),
+            attachments= [builder.as_markup()]
         )
-
-        await asyncio.sleep(5)
-        await context_data.clear()
-        return "after_tests_start"
 
     elif payload == "skip_tests":
         try:
@@ -1247,6 +1248,39 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         return "after_tests_start"
 
     return None
+
+async def handle_pay(event:MessageCallback):
+    chat_id, user_id = event.get_ids()
+    payload = event.callback.payload
+
+    if payload == "pay_yes":
+        await anamnez_db.set_privacy_policy_date(user_id= user_id, value= "pay_yes")
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text= resources.text_new_branch_handle_pay_yes
+        )
+        await event.bot.send_action(
+            chat_id=chat_id,
+            action=SenderAction.TYPING_ON
+        )
+
+        await asyncio.sleep(2)
+        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+
+    elif payload == "pay_no":
+        await anamnez_db.set_privacy_policy_date(user_id= user_id, value= "pay_no")
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text= resources.text_new_branch_handle_pay_no
+        )
+        await event.bot.send_action(
+            chat_id=chat_id,
+            action=SenderAction.TYPING_ON
+        )
+
+        await asyncio.sleep(2)
+        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
 
 
 async def handle_consent(event: MessageCallback, payload: str):

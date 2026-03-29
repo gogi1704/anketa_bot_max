@@ -88,6 +88,9 @@ async def callback_router(event: MessageCallback):
         await after_tests_main_menu(event)
         return
 
+    if payload.startswith("pay"):
+        await handle_pay(event)
+
 
 # __________________________________________________________________________________________________
 

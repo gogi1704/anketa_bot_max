@@ -534,6 +534,23 @@ async def delete_anketa(user_id: int):
         )
         await db.commit()
 
+
+async def set_privacy_policy_date(user_id: int, value: str | None = None):
+    """
+    Устанавливает privacy_policy_date для пользователя.
+    Если value не передан — ставит текущую дату UTC.
+    """
+    if value is None:
+        value = datetime.datetime.now(datetime.UTC)
+
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("""
+            UPDATE user_data
+            SET privacy_policy_date = ?
+            WHERE user_id = ?
+        """, (value, user_id))
+        await db.commit()
+
 #______ #STATE
 async def set_dialog_state(user_id: int, state: str):
     async with aiosqlite.connect(db_path) as db:
