@@ -339,78 +339,96 @@ async def anketa_dialog(event: MessageCreated):
         manager_msg_id=resources.STATES_USERS_FINALS['final_anketa']
     )
 
-    await event.message.answer("⏳ Анализирую анкету...")
+    # await event.message.answer("⏳ Анализирую анкету...")
 
     try:
         # Сохраняем анкету в БД
         await add_to_anketa(event, answers)
 
-        # Формируем текст анкеты
-        anketa_text = "\n".join(
-            f"{i + 1}. {q} — {a}"
-            for i, (q, a) in enumerate(zip(questions_small, answers))
-        )
-
-        # Запрос к GPT
-        user_prompt = prompts.user_prompt_new_rec_tests.format(
-            anketa=anketa_text
-        )
-
-        recs = await get_gpt_answer(
-            system_prompt=prompts.system_prompt_new_rec_tests,
-            user_prompt=user_prompt,
-            bot=event
-        )
-
-        risks, recommendations_list, rec_text = ai_utils.extract_recs(recs)
-
-        # ===== ЕСЛИ ЕСТЬ РЕКОМЕНДАЦИИ =====
-        if recommendations_list:
-
-            await event.message.answer(
-                f"Проанализировав ваши ответы, я выявил некоторые риски:\n{risks}\n"
+        await event.message.answer(
+                "Прямо во время медицинского осмотра вы можете быстро и удобно пройти один или сразу несколько комплексных чек-апов — без лишних визитов и ожиданий.\n\n"
+                "Это отличная возможность не только выполнить обязательный осмотр, но и глубже проверить своё здоровье, выявить возможные риски на раннем этапе и получить больше уверенности в своём самочувствии.\n\n"
+                "Все комплексы уже подобраны специалистами — вам остаётся только выбрать подходящий.\n\n"
+                "Ознакомиться с полным списком и выбрать нужный вариант можно по ссылке⬇️"
+                f"https://docs.google.com/document/d/1oEsDgDVVocJ9pQWVc6iH08T5kFT85qWv1y-in_BV0PY/edit?usp=sharing"
             )
 
-            await asyncio.sleep(5)
-
-            await event.message.answer(
-                "На основе этого анализа я сформировал ПЕРСОНАЛЬНУЮ РЕКОМЕНДАЦИЮ.\n"
-                f"Вам полезно пройти комплекс исследований:\n{rec_text}"
-            )
-
-            await asyncio.sleep(2)
-
-            await event.message.answer(
-                "Также вы можете выбрать любой из представленных комплексов услуг.\n"
-                "Ознакомиться можно по ссылке:\n"
-                f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
-            )
-
-            await asyncio.sleep(2)
-            keyboard_builder = InlineKeyboardBuilder()
-            keyboard_builder.row(CallbackButton(text = "Да", payload="dop_yes"),
+        await asyncio.sleep(5)
+        keyboard_builder = InlineKeyboardBuilder()
+        keyboard_builder.row(CallbackButton(text = "Да", payload="dop_yes"),
                                 CallbackButton(text = "Нет", payload="dop_no"))
 
-            await event.message.answer(
+        await event.message.answer(
                 resources.by_dop_tests_or_not_text,
                 attachments= [keyboard_builder.as_markup()]
             )
 
-        # ===== ЕСЛИ РЕКОМЕНДАЦИЙ НЕТ =====
-        else:
-            await anamnez_db.append_answer(
-                telegram_id=user_id,
-                text=f"Терапевт сказал:{resources.is_has_complaint_text}"
-            )
+        # # Формируем текст анкеты
+        # anketa_text = "\n".join(
+        #     f"{i + 1}. {q} — {a}"
+        #     for i, (q, a) in enumerate(zip(questions_small, answers))
+        # )
+        #
+        # # Запрос к GPT
+        # user_prompt = prompts.user_prompt_new_rec_tests.format(
+        #     anketa=anketa_text
+        # )
+        #
+        # recs = await get_gpt_answer(
+        #     system_prompt=prompts.system_prompt_new_rec_tests,
+        #     user_prompt=user_prompt,
+        #     bot=event
+        # )
+        #
+        # risks, recommendations_list, rec_text = ai_utils.extract_recs(recs)
 
-            await anamnez_db.set_dialog_state(
-                user_id,
-                resources.dialog_states_dict["is_has_complaint"]
-            )
-
-            await event.message.answer(
-                resources.is_has_complaint_text
-            )
+        # ===== ЕСЛИ ЕСТЬ РЕКОМЕНДАЦИИ =====
+        # if recommendations_list:
+        #
+        #     await event.message.answer(
+        #         f"Проанализировав ваши ответы, я выявил некоторые риски:\n{risks}\n"
+        #     )
+        #
+        #     await asyncio.sleep(5)
+        #
+        #     await event.message.answer(
+        #         "На основе этого анализа я сформировал ПЕРСОНАЛЬНУЮ РЕКОМЕНДАЦИЮ.\n"
+        #         f"Вам полезно пройти комплекс исследований:\n{rec_text}"
+        #     )
+        #
+        #     await asyncio.sleep(2)
+        #
+        #     await event.message.answer(
+        #         "Также вы можете выбрать любой из представленных комплексов услуг.\n"
+        #         "Ознакомиться можно по ссылке:\n"
+        #         f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
+        #     )
+        #
+        #     await asyncio.sleep(2)
+        #     keyboard_builder = InlineKeyboardBuilder()
+        #     keyboard_builder.row(CallbackButton(text = "Да", payload="dop_yes"),
+        #                         CallbackButton(text = "Нет", payload="dop_no"))
+        #
+        #     await event.message.answer(
+        #         resources.by_dop_tests_or_not_text,
+        #         attachments= [keyboard_builder.as_markup()]
+        #     )
+        #
+        # # ===== ЕСЛИ РЕКОМЕНДАЦИЙ НЕТ =====
+        # else:
+        #     await anamnez_db.append_answer(
+        #         telegram_id=user_id,
+        #         text=f"Терапевт сказал:{resources.is_has_complaint_text}"
+        #     )
+        #
+        #     await anamnez_db.set_dialog_state(
+        #         user_id,
+        #         resources.dialog_states_dict["is_has_complaint"]
+        #     )
+        #
+        #     await event.message.answer(
+        #         resources.is_has_complaint_text
+        #     )
 
     finally:
         # Удаляем сообщение ожидания
@@ -568,8 +586,7 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
                 payload="dopDop_no"
             ))
 
-        await event.bot.send_message(
-            chat_id=chat_id,
+        await event.message.answer(
             text=resources.get_tests_answer_false_text,
             attachments =[keyboard_builder.as_markup()]
         )
@@ -656,6 +673,9 @@ def build_tests_keyboard(selected_indexes: set[int]):
     keyboard_builder.row(
         CallbackButton(text="ГОТОВО", payload="done")
     )
+    keyboard_builder.row(
+        CallbackButton(text="Не хочу проходить обследования", payload="skip_tests")
+    )
 
     return keyboard_builder.as_markup()
 
@@ -670,8 +690,7 @@ async def choose_tests(event: MessageCallback, context_data: MemoryContext):
         "dop_message_id": None
     })
 
-    sent = await event.bot.send_message(
-        chat_id=chat_id,
+    sent = await event.message.answer(
         text=resources.choose_tests_text,
         attachments= [build_tests_keyboard(set())]
     )
@@ -778,9 +797,16 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             )
         )
 
-        await asyncio.sleep(5)
-        await context_data.clear()
+    elif payload == "skip_tests":
+        try:
+            await context_data.clear()
+            await event.bot.delete_message(
+                message_id=message_id
+            )
+        except Exception as e:
+            print(f"Ошибка удаления сообщения: {e}")
         return "after_tests_start"
+
     return None
 
 

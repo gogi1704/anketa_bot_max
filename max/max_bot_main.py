@@ -48,7 +48,7 @@ async def callback_router(event: MessageCallback):
         return
 
     # ===== TOGGLE =====
-    if payload.startswith("toggle:") or payload == "done":
+    if payload.startswith("toggle:") or payload == "done" or payload == "skip_tests":
         is_after_tests =  await handle_toggle(event, context_manager.get(chat_id, user_id))
         if is_after_tests:
             await after_tests_main_menu(event)
