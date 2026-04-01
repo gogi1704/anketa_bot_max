@@ -534,6 +534,23 @@ async def delete_anketa(user_id: int):
         )
         await db.commit()
 
+
+async def set_privacy_policy_date(user_id: int, value: str | None = None):
+    """
+    Устанавливает privacy_policy_date для пользователя.
+    Если value не передан — ставит текущую дату UTC.
+    """
+    if value is None:
+        value = datetime.datetime.now(datetime.UTC)
+
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("""
+            UPDATE user_data
+            SET privacy_policy_date = ?
+            WHERE user_id = ?
+        """, (value, user_id))
+        await db.commit()
+
 #______ #STATE
 async def set_dialog_state(user_id: int, state: str):
     async with aiosqlite.connect(db_path) as db:
@@ -712,3 +729,47 @@ async def delete_user_full(user_id: int):
         await db.commit()
 
     print(f"[🗑 DEBUG] Полностью удалён user_id={user_id}")
+
+
+#______STATISTIC
+async def get_report_by_inn(inn: str) -> str:
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT ud.get_dop_tests, ud.from_manager
+            FROM user_anketa ua
+            JOIN user_data ud ON ua.user_id = ud.user_id
+            WHERE ua.organization_or_inn = ?
+        """, (inn,))
+
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return f"По этому ИНН {inn} никто не найден"
+
+    total = len(rows)
+
+    # ВАЖНО: у тебя TEXT поле, не bool
+    want_tests = 0
+    managers = {}
+
+    for get_dop_tests, manager in rows:
+        # если есть любой текст → значит хочет обследование
+        if get_dop_tests and str(get_dop_tests).strip():
+            want_tests += 1
+
+        if manager:
+            managers[manager] = managers.get(manager, 0) + 1
+        else:
+            managers["без менеджера"] = managers.get("без менеджера", 0) + 1
+
+
+    # Формируем отчет
+    report = f"📊 Отчет по ИНН {inn}\n\n"
+    report += f"Всего пришли: {total}\n"
+    report += f"Хотят доп. обследования: {want_tests}\n\n"
+    report += "По менеджерам:\n"
+
+    for manager, count in managers.items():
+        report += f"{manager} — {count}\n"
+
+    return report

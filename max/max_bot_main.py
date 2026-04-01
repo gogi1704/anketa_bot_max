@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 from db.after_tests import after_tests_db
 from db.db_utils import update_db
+from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from max.max_bot_chat import max_bot_cha_manager_after_tests
 from utils.after_tests_utils import scheduler
@@ -113,6 +114,10 @@ async def bot_started_handler(event: BotStarted):
         await after_tests_main_menu(event)
     else:
         await bot_started(event)
+
+@dp.message_created(Command("get_stat_inn"))
+async def get_stat_inn(event: MessageCreated):
+    await get_statistic_by_inn(event)
 
 @dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):
