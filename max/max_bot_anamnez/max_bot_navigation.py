@@ -796,6 +796,9 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
                 price=price
             )
         )
+        await context_data.clear()
+        return "after_tests_start"
+
 
     elif payload == "skip_tests":
         try:
