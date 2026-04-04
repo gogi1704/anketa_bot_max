@@ -49,3 +49,9 @@ def kb_go_to_main_menu():
     builder.row(CallbackButton(text= "Главное меню",payload= "go_to_main_menu"))
 
     return builder.as_markup()
+
+def kb_statistic_inn_close():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text= "Отмена",payload= "go_to_main_menu"))
+
+    return builder.as_markup()

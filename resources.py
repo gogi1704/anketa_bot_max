@@ -130,6 +130,7 @@ dialog_states_dict = {"get_name":"state_get_name",
     "is_ready_to_consult":"state_is_ready_to_consult",
     "get_number":"state_get_number",
     "new_state":"state_new_state",
+    "stat_inn": "state_stat_inn",
                  }
 
 
@@ -574,6 +575,9 @@ dialog_states = {
     # руководство
     "boss_collect": "40",
     "boss_complete": "41",
+
+    # статистика
+    "stat_inn": "50"
 
 }
 

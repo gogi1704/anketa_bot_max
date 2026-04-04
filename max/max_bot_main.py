@@ -11,7 +11,7 @@ from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_t
 from maxapi import Dispatcher, Bot
 from maxapi.types import (
     Command, BotCommand, )
-
+from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
@@ -134,6 +134,10 @@ async def update_db_handler(event: MessageCreated):
 @dp.message_created(Command("clear_and_restart"))
 async def clear_handler(event: MessageCreated):
     await clear_all(event)
+
+@dp.message_created(Command("get_stat_inn"))
+async def get_stat_inn(event: MessageCreated):
+    await get_statistic_by_inn(event)
 
 
 @dp.message_created()

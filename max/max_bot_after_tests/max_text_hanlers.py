@@ -44,6 +44,12 @@ async def handle_text_message_after_tests(event:MessageCreated):
     name = user_data["name"] if user_data["name"] else "Не заполнено"
     age = anketa["age"] if anketa["age"] else -100
 
+    if state == dialog_states["stat_inn"]:
+        report = await anamnez_db.get_report_by_inn(text)
+        await event.bot.send_message(chat_id= chat_id,
+                                     text = report)
+        return
+
 
     if state == dialog_states["after_tests_get_info"]:
 
