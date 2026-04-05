@@ -269,6 +269,8 @@ async def new_branch_dialog_fatigue(event: MessageCreated, context_data: MemoryC
     if agent_answer is None:
         await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
     elif agent_answer == "all_right":
+        await anamnez_db.delete_dialog(user_id)
+
         await anamnez_db.append_answer(telegram_id=user_id,
                                        text=f"Медицинский ассистент сказал: {resources.text_new_branch_another_problems}")
         await anamnez_db.set_dialog_state(
@@ -295,11 +297,8 @@ async def new_branch_dialog_fatigue(event: MessageCreated, context_data: MemoryC
         await event.message.answer(text=answer_text)
         await asyncio.sleep(4)
 
-        await event.message.answer(
-            "Также вы можете выбрать любой из представленных комплексов услуг.\n"
-            "Ознакомиться можно по ссылке:\n"
-            f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
-            )
+        await event.message.answer(text= resources.text_check_up_url)
+
         await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
         await asyncio.sleep(3)
 
@@ -332,6 +331,7 @@ async def new_branch_dialog_overweight(event: MessageCreated,context_data: Memor
     if agent_answer is None:
         await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
     elif agent_answer == "all_right":
+        await anamnez_db.delete_dialog(user_id)
 
         await anamnez_db.append_answer(
             telegram_id=user_id,
@@ -363,11 +363,8 @@ async def new_branch_dialog_overweight(event: MessageCreated,context_data: Memor
         await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
         await asyncio.sleep(4)
 
-        await event.message.answer(
-            "Также вы можете выбрать любой из представленных комплексов услуг.\n"
-            "Ознакомиться можно по ссылке:\n"
-            f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
-            )
+        await event.message.answer(text=resources.text_check_up_url)
+
         await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
         await asyncio.sleep(3)
 
@@ -398,6 +395,7 @@ async def new_branch_dialog_blood_pressure(event: MessageCreated, context_data: 
     if agent_answer is None:
         await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
     elif agent_answer == "all_right":
+        await anamnez_db.delete_dialog(user_id)
         await anamnez_db.append_answer(
             telegram_id=user_id,
             text=f"Медицинский ассистент сказал:{resources.text_new_branch_perfect_analyze_short}"
@@ -428,11 +426,8 @@ async def new_branch_dialog_blood_pressure(event: MessageCreated, context_data: 
         await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
         await asyncio.sleep(4)
 
-        await event.message.answer(
-            "Также вы можете выбрать любой из представленных комплексов услуг.\n"
-            "Ознакомиться можно по ссылке:\n"
-            f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"
-            )
+        await event.message.answer(text=resources.text_check_up_url)
+
         await event.bot.send_action(chat_id=chat_id, action=SenderAction.TYPING_ON)
         await asyncio.sleep(3)
 
@@ -465,12 +460,6 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
         await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
 
     elif agent_answer == "all_right":
-        await anamnez_db.append_answer(telegram_id=user_id,
-                                       text=f"Медицинский ассистент сказал: {resources.text_new_branch_another_problem_all_right}")
-        await anamnez_db.set_dialog_state(
-            user_id,
-            resources.dialog_states_dict["new_branch_another_problems"]
-        )
         await event.message.answer(text=resources.text_new_branch_another_problem_all_right)
         await asyncio.sleep(3)
 
@@ -483,8 +472,6 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
         )
 
     elif agent_answer == "complete":
-        # await anamnez_db.append_answer(telegram_id=user_id,
-        #                                text=f"Медицинский ассистент сказал: {resources.text_new_branch_blood_pressure_complete}")
         user_data = await anamnez_db.get_user(user_id=user_id)
         await event.message.answer(text=resources.text_new_branch_another_problem_complete)
 
@@ -494,12 +481,22 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
             f"\n\n\n#Диалог_{user_id}"
         )
 
-        # await event.message.answer(text=f"Вот такое отправится менеджеру: {text_to_manager}\n\n\n Чтобы заново пройти анкетирование введите команду /clear_and_restart")
 
         await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
         await asyncio.sleep(3)
 
-        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+        await event.message.answer(text=resources.text_new_branch_another_problem_all_right)
+        await asyncio.sleep(3)
+
+        keyboard_builder = InlineKeyboardBuilder()
+        keyboard_builder.row(CallbackButton(text="Да", payload="dop_yes"),
+                             CallbackButton(text="Нет", payload="dop_no"))
+        await event.message.answer(
+            text=resources.text_new_branch_go_to_tests,
+            attachments=[keyboard_builder.as_markup()]
+        )
+
+        # await max_bot_after_tests_main_menu.after_tests_main_menu(event)
 
     else:
         await anamnez_db.append_answer(telegram_id=user_id, text=f"Медицинский ассистент сказал: {agent_answer}")
