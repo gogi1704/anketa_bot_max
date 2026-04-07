@@ -583,7 +583,8 @@ dialog_states = {
     "boss_complete": "41",
 
     # статистика
-    "stat_inn": "50"
+    "stat_inn": "50",
+    "get_stat_inn_by_date": "51"
 
 }
 

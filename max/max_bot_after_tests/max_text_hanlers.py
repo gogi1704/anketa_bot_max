@@ -50,6 +50,12 @@ async def handle_text_message_after_tests(event:MessageCreated):
                                      text = report)
         return
 
+    if state == dialog_states["get_stat_inn_by_date"]:
+        report = await anamnez_db.get_unique_organizations_report_since_date(text)
+        await event.bot.send_message(chat_id= chat_id,
+                                     text = report)
+        return
+
 
     if state == dialog_states["after_tests_get_info"]:
 

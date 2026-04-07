@@ -773,3 +773,239 @@ async def get_report_by_inn(inn: str) -> str:
         report += f"{manager} — {count}\n"
 
     return report
+
+async def get_report_by_inns(inn_list: list[str]) -> str:
+    if not inn_list:
+        return "Список ИНН пуст"
+
+    placeholders = ",".join(["?"] * len(inn_list))
+
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute(f"""
+            SELECT ua.organization_or_inn, ud.get_dop_tests, ud.from_manager
+            FROM user_anketa ua
+            JOIN user_data ud ON ua.user_id = ud.user_id
+            WHERE ua.organization_or_inn IN ({placeholders})
+        """, inn_list)
+
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return "По переданным ИНН никто не найден"
+
+    stats = {}
+
+    for inn, get_dop_tests, manager in rows:
+        if inn not in stats:
+            stats[inn] = {
+                "total": 0,
+                "want_tests": 0,
+                "managers": {}
+            }
+
+        stats[inn]["total"] += 1
+
+        # проверка на наличие обследования (TEXT поле)
+        if get_dop_tests and str(get_dop_tests).strip():
+            stats[inn]["want_tests"] += 1
+
+        if manager:
+            stats[inn]["managers"][manager] = stats[inn]["managers"].get(manager, 0) + 1
+        else:
+            stats[inn]["managers"]["без менеджера"] = stats[inn]["managers"].get("без менеджера", 0) + 1
+
+    # ==== Формируем отчет ====
+
+    report = "📊 Общий отчет по ИНН\n\n"
+
+    total_all = 0
+    want_tests_all = 0
+
+    for inn, data in stats.items():
+        total = data["total"]
+        want_tests = data["want_tests"]
+
+        total_all += total
+        want_tests_all += want_tests
+
+        report += f"ИНН: {inn}\n"
+        report += f"Всего: {total}\n"
+        report += f"Доп. обследования: {want_tests}\n"
+        report += "Менеджеры:\n"
+
+        for manager, count in data["managers"].items():
+            report += f"  {manager} — {count}\n"
+
+        report += "\n"
+
+    # ==== общий итог ====
+    report += "------\n"
+    report += f"ВСЕГО пользователей: {total_all}\n"
+    report += f"ВСЕГО доп. обследований: {want_tests_all}\n"
+
+    return report
+
+
+from collections import Counter
+def normalize_dt_for_sqlite(value: str | datetime.datetime) -> str:
+    """
+    Приводит дату к строке, которую можно безопасно сравнивать в SQLite.
+    Поддерживает:
+    - str: "2026-03-30"
+    - str: "2026-03-30 00:00:00+00:00"
+    - datetime.datetime
+    """
+    if isinstance(value, datetime.datetime):
+        return value.isoformat(sep=" ")
+
+    value = str(value).strip()
+
+    # Если пришла только дата без времени, добавим начало суток UTC
+    if len(value) == 10 and value.count("-") == 2:
+        return f"{value} 00:00:00+00:00"
+
+    return value
+
+
+async def get_user_ids_since_date(date_from: str | datetime.datetime) -> list[int]:
+    """
+    Возвращает список user_id из user_data,
+    зарегистрированных начиная с указанной даты.
+    """
+    date_from = normalize_dt_for_sqlite(date_from)
+
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT user_id
+            FROM user_data
+            WHERE register_date >= ?
+            ORDER BY register_date
+        """, (date_from,))
+        rows = await cursor.fetchall()
+
+    return [row[0] for row in rows]
+
+
+async def get_unique_organizations_by_user_ids(user_ids: list[int]) -> list[str]:
+    """
+    Проходит по списку user_id, берет organization_or_inn из user_anketa
+    и возвращает уникальный список непустых значений.
+    """
+    if not user_ids:
+        return []
+
+    unique_organizations = set()
+
+    async with aiosqlite.connect(db_path) as db:
+        for user_id in user_ids:
+            cursor = await db.execute("""
+                SELECT organization_or_inn
+                FROM user_anketa
+                WHERE user_id = ?
+            """, (user_id,))
+            row = await cursor.fetchone()
+
+            if row and row[0] and str(row[0]).strip():
+                unique_organizations.add(str(row[0]).strip())
+
+    return sorted(unique_organizations)
+
+
+async def get_organizations_stats_by_user_ids(user_ids: list[int]) -> dict[str, int]:
+    """
+    Возвращает статистику по organization_or_inn:
+    сколько пользователей приходится на каждую организацию/ИНН.
+    """
+    if not user_ids:
+        return {}
+
+    counter = Counter()
+
+    async with aiosqlite.connect(db_path) as db:
+        for user_id in user_ids:
+            cursor = await db.execute("""
+                SELECT organization_or_inn
+                FROM user_anketa
+                WHERE user_id = ?
+            """, (user_id,))
+            row = await cursor.fetchone()
+
+            if row and row[0] and str(row[0]).strip():
+                org = str(row[0]).strip()
+                counter[org] += 1
+
+    return dict(sorted(counter.items(), key=lambda item: (-item[1], item[0])))
+
+
+async def get_unique_organizations_since_date(date_from: str | datetime.datetime) -> dict:
+    """
+    Основной метод.
+    1. Берет user_id из user_data после date_from
+    2. По каждому user_id получает organization_or_inn из user_anketa
+    3. Возвращает и список user_id, и уникальные организации, и счетчики
+    """
+    normalized_date = normalize_dt_for_sqlite(date_from)
+    user_ids = await get_user_ids_since_date(normalized_date)
+    organizations = await get_unique_organizations_by_user_ids(user_ids)
+    organizations_stats = await get_organizations_stats_by_user_ids(user_ids)
+
+    return {
+        "date_from": normalized_date,
+        "user_ids": user_ids,
+        "organizations": organizations,
+        "organizations_stats": organizations_stats,
+        "users_count": len(user_ids),
+        "organizations_count": len(organizations),
+    }
+
+
+async def get_unique_organizations_report_since_date(date_from: str | datetime.datetime) -> str:
+    """
+    Финальный полный отчет строкой для отправки в боте.
+    """
+    data = await get_unique_organizations_since_date(date_from)
+
+    date_from = data["date_from"]
+    user_ids = data["user_ids"]
+    organizations = data["organizations"]
+    organizations_stats = data["organizations_stats"]
+    users_count = data["users_count"]
+    organizations_count = data["organizations_count"]
+
+    if not user_ids:
+        return (
+            f"📊 Отчет по организациям за период\n\n"
+            f"Дата начала: {date_from}\n"
+            f"Новых пользователей: 0\n"
+            f"Уникальных организаций/ИНН: 0\n\n"
+            f"За указанный период пользователей не найдено."
+        )
+
+    report_lines = [
+        "📊 Отчет по организациям за период",
+        "",
+        f"Дата начала: {date_from}",
+        f"Новых пользователей: {users_count}",
+        f"Уникальных организаций/ИНН: {organizations_count}",
+        "",
+        "Уникальные organization_or_inn:",
+    ]
+
+    final_report = await get_report_by_inns(organizations)
+    print(organizations)
+    print(final_report)
+
+    # for index, org in enumerate(organizations, start=1):
+    #     report_lines.append(f"{index}. {org}")
+    #
+    # report_lines.append("")
+    # report_lines.append("Распределение по организациям/ИНН:")
+    #
+    # for org, count in organizations_stats.items():
+    #     report_lines.append(f"{org} — {count}")
+    #
+    # report_lines.append("")
+    # report_lines.append("Список user_id за период:")
+    # report_lines.append(", ".join(map(str, user_ids)))
+
+    return "\n".join(report_lines)

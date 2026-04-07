@@ -18,3 +18,17 @@ async def get_statistic_by_inn(event: MessageCreated):
         text= "Введите инн :\n\n\n Или нажмите кнопку для отмены",
         attachments=[tests_keyboards.kb_statistic_inn_close()]
     )
+
+async def get_statistic_inn_by_date(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+
+    await db.set_neuro_dialog_states(
+            user_id,
+            resources.dialog_states["get_stat_inn_by_date"]
+    )
+
+    await event.bot.send_message(
+            chat_id=chat_id,
+            text="Введите полную дату :\n\n\n Или нажмите кнопку для отмены",
+            attachments=[tests_keyboards.kb_statistic_inn_close()]
+        )
