@@ -109,11 +109,12 @@ async def callback_router(event: MessageCallback):
 async def bot_started_handler(event: BotStarted):
     chat_id, user_id = event.get_ids()
     user_is_after_tests = await after_tests_db.get_user_state(user_id)
-
     if user_is_after_tests:
         await after_tests_main_menu(event)
     else:
-        await bot_started(event)
+        ref_code = await bot_started(event)
+        if ref_code:
+            await after_tests_main_menu(event)
 
 @dp.message_created(Command("start"))
 async def start_handler(event: MessageCreated):

@@ -39,6 +39,8 @@ async def bot_started(event: BotStarted):
     # === 1. Новый пользователь ===
     ref_code = args if args else "base_url"
     await anamnez_db.add_user(user_id, name="", from_manager=ref_code)
+    if ref_code == "results":
+        return ref_code
 
     await anamnez_db.append_answer(
         telegram_id=user_id,
@@ -69,7 +71,7 @@ async def bot_started(event: BotStarted):
 
         # Переходим к следующему состоянию
     await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
-    return
+    return None
 
 
 
