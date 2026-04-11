@@ -9,29 +9,40 @@ from maxapi.types import InputMedia
 
 GOOGLE_DOC_ID_RE = re.compile(r"/document/d/([a-zA-Z0-9_-]+)")
 
+GOOGLE_DRIVE_FILE_ID_RE = re.compile(
+    r"https?://drive\.google\.com/file/d/([a-zA-Z0-9_-]+)"
+)
+
+
 def extract_google_doc_id(url: str) -> Optional[str]:
     """
-    Возвращает Google Doc ID из ссылки вида:
-    https://docs.google.com/document/d/<ID>/edit?...
+    Возвращает Google Drive File ID из ссылки вида:
+    https://drive.google.com/file/d/<ID>/view?...
     """
-    m = GOOGLE_DOC_ID_RE.search(url or "")
+    m = GOOGLE_DRIVE_FILE_ID_RE.search(url or "")
     return m.group(1) if m else None
 
-async def download_google_doc_as_docx(doc_id: str) -> str:
-    """
-    Скачивает Google Doc как .docx во временный файл.
-    Возвращает путь к файлу.
-    """
-    export_url = f"https://docs.google.com/document/d/{doc_id}/export?format=docx"
 
-    fd, tmp_path = tempfile.mkstemp(prefix="gdoc_", suffix=".docx")
-    os.close(fd)  # файл будем писать сами
+async def download_google_doc_as_docx(file_id: str, suffix: str = ".pdf") -> str:
+    """
+    Скачивает файл из Google Drive во временный файл.
+    Возвращает путь к скачанному файлу.
+    """
+
+    # Прямая ссылка на скачивание файла
+    download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+
+    fd, tmp_path = tempfile.mkstemp(prefix="gdrive_", suffix=suffix)
+    os.close(fd)
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(export_url, allow_redirects=True) as resp:
+            async with session.get(download_url, allow_redirects=True) as resp:
                 if resp.status != 200:
-                    raise RuntimeError(f"Google export failed: HTTP {resp.status}")
+                    raise RuntimeError(
+                        f"Google Drive download failed: HTTP {resp.status}"
+                    )
+
                 data = await resp.read()
 
         with open(tmp_path, "wb") as f:
@@ -40,12 +51,13 @@ async def download_google_doc_as_docx(doc_id: str) -> str:
         return tmp_path
 
     except Exception:
-        # если скачивание упало — подчистим временный файл
         try:
             os.remove(tmp_path)
         except OSError:
             pass
         raise
+
+
 
 def extract_text_from_docx(docx_path: str) -> str:
     """
@@ -92,7 +104,7 @@ async def send_results_doc_and_text(event,
             failed += 1
             await event.bot.send_message(
                 user_id= user_id,
-                text=f"❌ [{idx}/{len(urls)}] Не смог распознать ссылку:\n{url}"
+                text=f"[{idx}/{len(urls)}] Ссылка:\n{url}"
             )
             continue
 
@@ -113,7 +125,7 @@ async def send_results_doc_and_text(event,
             failed += 1
             await event.bot.send_message(
                 user_id= user_id,
-                text=f"❌ [{idx}/{len(urls)}] Не получилось скачать/прочитать документ:\n{url}\nОшибка: {e}"
+                text=f"❌ [{idx}/{len(urls)}] Не получилось скачать/прочитать документ:\n{url}\nПерейдите по ссылке выше и скачайте документ в ручном режиме."
             )
 
         finally:

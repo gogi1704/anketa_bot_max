@@ -90,3 +90,29 @@ async def get_gpt_answer(system_prompt, user_prompt, bot = None, model = model_g
             return answer
 
     return answer
+
+# async def get_gpt_base_answer(system_prompt, user_prompt, model = model_gpt_5_mini):
+#     messages = [
+#         {"role": "system", "content": system_prompt},
+#         {"role": "user", "content": user_prompt}
+#     ]
+#     try:
+#         client_ai = AsyncOpenAI(api_key="API_KEY")
+#         completion = await client_ai.chat.completions.create(
+#             model=model,
+#             messages=messages,
+#         )
+#         return completion.choices[0].message.content
+#
+#     except Exception as e:
+#         err = str(e)
+#
+#         # проверяем, что это ошибка лимита токенов
+#         if "insufficient_quota" in err or "exceeded your current quota" in err or "Incorrect API key provided" in err :
+#             print("❌ Закончились токены / баланс OpenAI API.")
+#
+#             return "error"
+#
+#         else:
+#             print(f"Другая ошибка: {err}")
+#             return "error_else"

@@ -55,3 +55,10 @@ def kb_statistic_inn_close():
     builder.row(CallbackButton(text= "Отмена",payload= "go_to_main_menu"))
 
     return builder.as_markup()
+
+def kb_get_your_sex():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text= "Мужчина",payload= "get_your_sex_man"))
+    builder.row(CallbackButton(text="Женщина", payload="get_your_sex_woman"))
+
+    return builder.as_markup()

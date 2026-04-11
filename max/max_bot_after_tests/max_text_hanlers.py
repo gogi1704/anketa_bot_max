@@ -40,6 +40,7 @@ async def handle_text_message_after_tests(event:MessageCreated):
 
     user_data = await anamnez_db.get_user(user_id)
     anketa = await  anamnez_db.get_anketa(user_id)
+    sex = await db.get_user_sex(user_id)
 
     name = user_data["name"] if user_data["name"] else "Не заполнено"
     age = anketa["age"] if anketa["age"] else -100
@@ -86,10 +87,10 @@ async def handle_text_message_after_tests(event:MessageCreated):
         await handle_get_med_id(event)
 
     elif state == dialog_states["get_med_id_decode"]:
-        await handle_get_med_id_decode(event, name, age)
+        await handle_get_med_id_decode(event, sex, age)
 
     elif state == dialog_states["get_med_id_consult"]:
-        await handle_get_med_id_consult(event, name, age)
+        await handle_get_med_id_consult(event, sex, age)
 
     elif state == dialog_states["base_speak"]:
         await handle_base_speak(event, dialog, name, age)

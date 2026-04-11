@@ -7,3 +7,5 @@ google-api-python-client
 gspread
 python-docx
 aiohttp
+pymupdf
+requests

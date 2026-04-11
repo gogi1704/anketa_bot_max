@@ -6,7 +6,7 @@ from maxapi.types import MessageCallback, MessageCreated
 
 from ai_agents import open_ai_main
 from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYSTEM_PROMPT, BOSS_COLLECT_SYSTEM_PROMPT
-from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_tests_decode, kb_after_good_tests, \
+from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import \
     kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_go_to_main_menu
 from max.max_bot_anamnez.max_bot_navigation import choose_tests
 
@@ -17,6 +17,7 @@ from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat
 from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji, parse_base_answer, \
     replace_wait_with_text, pars_answer_and_data
 from doc_funs import send_results_doc_and_text, split_urls_from_cell
+from ai_agents import check_tests_pdf
 
 
 
@@ -24,6 +25,16 @@ from doc_funs import send_results_doc_and_text, split_urls_from_cell
 async def after_tests_main_menu(event):
     chat_id,user_id = event.get_ids()
     user_state = await db.get_user_state(user_id)
+    user_sex = await  db.get_user_sex(user_id)
+
+    if user_sex is None or user_sex == "":
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.TEXT_TESTS_GET_YOUR_SEX,
+            attachments=[tests_keyboards.kb_get_your_sex()]
+        )
+        return
+
     await db.delete_neuro_dialog_states(user_id)
     if user_state is None:
         await db.set_user_state(telegram_id= user_id , user_state= "MAX")
@@ -35,7 +46,7 @@ async def after_tests_main_menu(event):
         attachments=[tests_keyboards.kb_tests_main_menu()]
     )
 
-async def handle_after_tests_main_menu(event:MessageCallback, name, age):
+async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
     chat_id, user_id = event.get_ids()
     data = event.callback.payload
     message = event.message
@@ -60,7 +71,6 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
         if med_id:
 
             doc_url = await db.get_test_results(int(med_id))
-            is_tests_bad = await db.get_deviations(int(med_id))
 
             if doc_url:
 
@@ -74,31 +84,9 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
                                       sleep_time=5)
 
                 await send_results_doc_and_text(event, doc_url)
+                await asyncio.sleep(3)
+                await after_tests_main_menu(event)
 
-                if is_tests_bad:
-
-                    await event.bot.send_message(
-                        user_id= user_id,
-                        text= resources.TEXT_TESTS_IS_BAD,
-                        attachments= [kb_tests_decode()]
-                    )
-
-                else:
-
-                    await event.bot.send_message(
-                        user_id= user_id,
-                        text= resources.TEXT_TESTS_IS_GOOD
-                    )
-
-                    await write_and_sleep(event=event,
-                                          chat_id=chat_id,
-                                          sleep_time=5)
-
-                    await event.bot.send_message(
-                        user_id= user_id,
-                        text= resources.TEXT_AFTER_GOOD_TESTS,
-                        attachments= [kb_after_good_tests()]
-                    )
 
             else:
 
@@ -135,35 +123,11 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
         med_id = await db.get_med_id(user_id)
 
         if med_id:
-
-            decode = await db.get_test_decode(int(med_id))
-
-            if decode:
-
-                await event.bot.send_message(
-                    user_id= user_id,
-                    text=f"Вот ваша расшифровка: {decode}"
-                )
-
-                await db.set_neuro_dialog_states(
-                    user_id,
-                    resources.dialog_states["base_speak"]
-                )
-
-                await write_and_sleep(event=event,
-                                      chat_id=chat_id,
-                                      sleep_time=3)
-
-                await event.bot.send_message(
-                    user_id= user_id,
-                    text=resources.TEXT_GET_DECODE_COMPLETE_MESSAGE
-                )
-
-                await write_and_sleep(event=event,
-                                      chat_id=chat_id,
-                                      sleep_time=2)
-
-                await after_tests_main_menu(event= event)
+            doc_url = await db.get_test_results(int(med_id))
+            if doc_url:
+                await send_manager_get_decode(event, med_id, user_id, sex, age)
+                await write_and_sleep(event,chat_id,3)
+                await after_tests_main_menu(event)
                 return
 
             await event.bot.send_message(
@@ -182,17 +146,9 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
                                   chat_id=chat_id,
                                   sleep_time=3)
 
-            await send_manager_get_decode(event, med_id, user_id, name, age)
 
-            await db.set_neuro_dialog_states(
-                user_id,
-                resources.dialog_states["base_speak"]
-            )
 
-            await event.bot.send_message(
-                user_id= user_id,
-                text=resources.TEXT_TESTS_GET_DECODE_FINAL
-            )
+            await after_tests_main_menu(event)
 
         else:
 
@@ -216,12 +172,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
             doc_url = await db.get_test_results(number)
 
             if doc_url:
-
-                await event.bot.send_message(
-                    user_id= user_id,
-                    text= resources.TEXT_NEW_MED_CONSULT_YES,
-                )
-                await send_manager_get_consult(event, med_id, user_id, name, age)
+                await send_manager_get_consult(event, med_id, user_id, sex, age)
 
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
@@ -242,7 +193,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, name, age):
                     kind="decode"
                 )
 
-                await send_manager_get_consult(event, med_id, user_id, name, age)
+                # await send_manager_get_consult(event, med_id, user_id, sex, age)
 
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
@@ -309,7 +260,6 @@ async def handle_get_med_id(event:MessageCreated):
         await db.delete_neuro_dialog_states(user_id)
 
         doc_url = await db.get_test_results(number)
-        is_tests_bad = await db.get_deviations(number)
 
         if doc_url:
             await event.message.answer(text=resources.TEXT_TESTS_IS_HAS_TRUE)
@@ -318,24 +268,9 @@ async def handle_get_med_id(event:MessageCreated):
                                   sleep_time=4)
             await send_results_doc_and_text(event= event,
                                             doc_urls=  doc_url)
+            await asyncio.sleep(3)
+            await after_tests_main_menu(event)
 
-            if is_tests_bad:
-                await event.bot.send_message(
-                    user_id= user_id,
-                    text=resources.TEXT_TESTS_IS_BAD,
-                    attachments= [tests_keyboards.kb_tests_decode()]
-                )
-            else:
-                await event.message.answer(text=resources.TEXT_TESTS_IS_GOOD)
-                await write_and_sleep(event=event,
-                                      chat_id=chat_id,
-                                      sleep_time=2)
-
-                await event.bot.send_message(
-                    user_id= user_id,
-                    text=resources.TEXT_AFTER_GOOD_TESTS,
-                    attachments= [kb_after_good_tests()]
-                )
         else:
             await db.add_pending_notification(
                 med_id= number,
@@ -355,11 +290,10 @@ async def handle_get_med_id(event:MessageCreated):
                 attachments= [tests_keyboards.kb_tests_main_menu()]
             )
 
-async def handle_get_med_id_decode(event:MessageCreated, name, age):
+async def handle_get_med_id_decode(event:MessageCreated, sex, age):
     chat_id, user_id = event.get_ids()
     med_id = event.message.body.text
     number = parse_int(med_id)
-    print(f"handle_get_med_id\nтекст{med_id}\nномер{number}")
 
     if number is None:
         await event.message.answer(
@@ -372,24 +306,11 @@ async def handle_get_med_id_decode(event:MessageCreated, name, age):
         doc_url = await db.get_test_results(number)
 
         if doc_url:
-            await db.add_pending_notification(
-                med_id=int(med_id),
-                telegram_id= user_id,
-                chat_id= chat_id,
-                kind="decode"
-            )
-
-            await event.message.answer(text=resources.TEXT_TESTS_IS_HAS_TRUE_DECODE)
+            await send_manager_get_decode(event, med_id, user_id, sex, age)
             await write_and_sleep(event=event,
-                                  chat_id=chat_id,
-                                  sleep_time=3)
-
-            await send_manager_get_decode(event, med_id, user_id, name, age)
-            await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
-            await event.bot.send_message(
-                user_id= user_id,
-                text=resources.TEXT_TESTS_GET_DECODE_FINAL,
-            )
+                              chat_id=chat_id,
+                              sleep_time=2)
+            await after_tests_main_menu(event)
 
 
         else:
@@ -512,7 +433,6 @@ async def handle_base_speak(event:MessageCreated, dialog, name, age):
 
         if med_id:
             doc_url = await db.get_test_results(int(med_id))
-            is_tests_bad = await db.get_deviations(int(med_id))
 
             if doc_url:
                 await event.bot.send_message(
@@ -524,25 +444,9 @@ async def handle_base_speak(event:MessageCreated, dialog, name, age):
                                       sleep_time=5)
                 await send_results_doc_and_text(event, doc_url)
 
-                if is_tests_bad:
-                    await event.bot.send_message(
-                        user_id=user_id,
-                        text=resources.TEXT_TESTS_IS_BAD,
-                        attachments= kb_tests_decode()
-                    )
-                else:
-                    await event.bot.send_message(
-                        user_id=user_id,
-                        text=resources.TEXT_TESTS_IS_GOOD)
+                await asyncio.sleep(3)
+                await after_tests_main_menu(event)
 
-                    await write_and_sleep(event=event,
-                                          chat_id=chat_id,
-                                          sleep_time=2)
-                    await event.bot.send_message(
-                        user_id=user_id,
-                        text=resources.TEXT_AFTER_GOOD_TESTS,
-                        attachments= kb_after_good_tests()
-                    )
             else:
                 await db.add_pending_notification(
                     med_id=int(med_id),
@@ -574,57 +478,40 @@ async def handle_base_speak(event:MessageCreated, dialog, name, age):
 
     if answer == "get_decode":
         med_id = await db.get_med_id(user_id)
+        doc_url = await db.get_test_results(int(med_id))
         await db.delete_neuro_dialog_states(user_id)
 
         if med_id:
-            decode = await db.get_test_decode(int(med_id))
+            if doc_url is None:
+                await db.add_pending_notification(
+                    med_id=int(med_id),
+                    telegram_id=user_id,
+                    chat_id=chat_id,
+                    kind="decode"
+                )
 
-            if decode:
-                decode_message = f"Вот ваша расшифровка: {decode}"
                 await event.bot.send_message(
                     user_id = user_id,
-                    text=decode_message,
+                    text=resources.TEXT_TESTS_IS_HAS_TRUE_DECODE,
                 )
-                await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
                 await write_and_sleep(event=event,
                                       chat_id=chat_id,
                                       sleep_time=3)
 
-                await event.bot.send_message(
-                    user_id = user_id,
-                    text=resources.TEXT_GET_DECODE_COMPLETE_MESSAGE
-                )
+                await after_tests_main_menu(event)
+            else:
+                await send_manager_get_decode(event= event,
+                                              med_id= med_id,
+                                              user_id= user_id,
+                                              sex= name,
+                                              age= age)
+                await write_and_sleep(event=event,
+                                      chat_id=chat_id,
+                                      sleep_time=3)
 
                 await after_tests_main_menu(event)
-                return
 
-            await db.add_pending_notification(
-                med_id=int(med_id),
-                telegram_id=user_id,
-                chat_id=chat_id,
-                kind="decode"
-            )
 
-            await event.bot.send_message(
-                user_id = user_id,
-                text=resources.TEXT_TESTS_IS_HAS_TRUE_DECODE,
-            )
-            await write_and_sleep(event=event,
-                                  chat_id=chat_id,
-                                  sleep_time=3)
-
-            await send_manager_get_decode(event= event,
-                                          med_id= med_id,
-                                          user_id= user_id,
-                                          name= name,
-                                          age= age)
-
-            await db.set_neuro_dialog_states(user_id, resources.dialog_states["base_speak"])
-            await event.bot.send_message(
-                user_id = user_id,
-                text=resources.TEXT_TESTS_GET_DECODE_FINAL,
-                attachments= [kb_go_to_main_menu()]
-            )
 
         else:
             await db.set_neuro_dialog_states(user_id, resources.dialog_states["get_med_id_decode"])
@@ -789,7 +676,7 @@ async def handle_decode_yes_no(event:MessageCallback, name, age):
         await send_manager_get_decode(event= event,
                                       med_id= med_id,
                                       user_id=user_id,
-                                      name= name,
+                                      sex= name,
                                       age = age)
         await event.bot.send_message(
             user_id= user_id,
@@ -814,7 +701,7 @@ async def handle_decode_yes_no(event:MessageCallback, name, age):
 
         await after_tests_main_menu(event=event)
 
-async def handle_empty_decode(event:MessageCallback, name, age):
+async def handle_empty_decode(event:MessageCallback):
     chat_id, user_id = event.get_ids()
     data = event.callback.payload
 
@@ -833,14 +720,11 @@ async def handle_empty_decode(event:MessageCallback, name, age):
         )
 
         await event.bot.send_message(user_id=user_id, text=resources.TEXT_TESTS_IS_HAS_TRUE_DECODE)
-        await send_manager_get_decode(event, med_id,user_id, name, age)
         await write_and_sleep(event=event,
                               chat_id=chat_id,
                               sleep_time=3)
 
-        await event.bot.send_message(
-            user_id= user_id,
-            text=resources.TEXT_TESTS_GET_DECODE_FINAL)
+        await after_tests_main_menu(event)
 
 
     elif data == "empty_decode_get_manager":
@@ -887,27 +771,64 @@ async def handle_after_good_tests_yes_no(event: MessageCallback):
 
 
 
-async def send_manager_get_decode(event, med_id, user_id, name, age):
-    doc_url = await db.get_test_results(int(med_id))
-    doc_urls = split_urls_from_cell(doc_url)
-    if doc_url:
-        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит расшифровать анализы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
-    else:
-        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит найти его анализы и сделать расшифровку. Вот номер его пробирки: {med_id}\n\n(#Диалог_{user_id})."
-    await send_to_chat(event= event,
-                       user_id= user_id,
-                       message_text= text_to_manager)
+async def send_manager_get_decode(event, med_id, user_id, sex, age):
+    try:
+        await event.bot.send_message(user_id=user_id, text= "Пожалуйста, подождите несколько минут. Обычно анализ занимает до 3 минут.Спасибо за понимание.")
+        doc_url = await db.get_test_results(int(med_id))
+        doc_urls = split_urls_from_cell(doc_url)
+        text_to_manager = "Неопознанная ошибка"
+        if doc_url:
+            check_result , problems = await check_tests_pdf.check_list_result(links= doc_urls, bot= event.bot, sex = sex, age = age)
+            if check_result == "complete":
+                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+                await event.bot.send_message(
+                    user_id= user_id,
+                    text= "Ваши результаты находятся в пределах нормы."
+                )
+            elif check_result == "need_consult":
+                problems_text = await get_text_problems(problems)
+                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения:\n{problems_text}\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+                await event.bot.send_message(
+                    user_id= user_id,
+                    text= f"У вас есть следующие отклонения от нормы: \n{problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                )
+        await send_to_chat(event= event,
+                           user_id= user_id,
+                           message_text= text_to_manager)
+    except():
+        await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
+        await write_and_sleep(event = event, chat_id= user_id, sleep_time= 2)
+        await after_tests_main_menu(event)
 
-async def send_manager_get_consult(event, med_id, user_id, name, age):
-    doc_url = await db.get_test_results(int(med_id))
-    doc_urls = split_urls_from_cell(doc_url)
-    if doc_url:
-        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n просит консультацию по результатам анализов.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
-    else:
-        text_to_manager = f"Пользователь(Имя: {name}\n Возраст: {age})\n консультацию по результатам анализов.Анализы не найдены в таблице.\n Вот номер его пробирки: {med_id}\n\n(#Диалог_{user_id})."
-    await send_to_chat(event=event,
-                       user_id=user_id,
-                       message_text=text_to_manager)
+async def send_manager_get_consult(event, med_id, user_id, sex, age):
+    try:
+        await event.bot.send_message(user_id=user_id, text= "Пожалуйста, подождите несколько минут. Обычно анализ занимает до 3 минут.Спасибо за понимание.")
+        doc_url = await db.get_test_results(int(med_id))
+        doc_urls = split_urls_from_cell(doc_url)
+        text_to_manager = "Неопознанная ошибка"
+        if doc_url:
+            check_result , problems = await check_tests_pdf.check_list_result(links= doc_urls, bot= event.bot, sex = sex , age = age)
+            if check_result == "complete":
+                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+                await event.bot.send_message(
+                    user_id= user_id,
+                    text= "Ваши результаты находятся в пределах нормы..."
+                )
+            elif check_result == "need_consult":
+                problems_text = await get_text_problems(problems)
+                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения:\n{problems_text}\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+                await event.bot.send_message(
+                    user_id= user_id,
+                    text=f"У вас есть следующие отклонения от нормы: \n{problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                )
+
+        await send_to_chat(event=event,
+                           user_id=user_id,
+                           message_text=text_to_manager)
+    except():
+        await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
+        await write_and_sleep(event = event, chat_id= user_id, sleep_time= 2)
+        await after_tests_main_menu(event)
 
 
 
@@ -915,3 +836,40 @@ async def send_manager_get_consult(event, med_id, user_id, name, age):
 async def complete_dialog(user_id: int, last_text: str):
     await db.delete_dialog(user_id)
     await db.append_answer(user_id, "Assistant", last_text)
+
+async def get_text_problems(list_of_lists_dicts: list[list[dict[str, str]]] | None) -> str:
+    if not list_of_lists_dicts:
+        return ""
+
+    text_problems = ""
+    unique_items = set()
+
+    for lists in list_of_lists_dicts:
+        if not lists:
+            continue
+
+        for item in lists:
+            if not item:
+                continue
+
+            problem_name = item.get("name")
+            current_value = item.get("value")
+            norm_value = item.get("norm")
+
+            if not problem_name or current_value is None or norm_value is None:
+                continue
+
+            key = (problem_name, current_value, norm_value)
+
+            if key in unique_items:
+                continue
+
+            unique_items.add(key)
+
+            text_problems += (
+                f"{problem_name}:\n"
+                f"🧍 Ваш показатель — {current_value}\n"
+                f"✅ Норма — {norm_value}\n\n"
+            )
+
+    return text_problems.strip()

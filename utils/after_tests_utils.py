@@ -5,10 +5,12 @@ import json
 from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
 from maxapi.methods.types.sended_message import SendedMessage
-from db.anamnez import anamnez_db
+from ai_agents import check_tests_pdf
 from db.after_tests import after_tests_db
+from doc_funs import split_urls_from_cell
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
 from max.max_bot_chat.max_bot_chat_manager import send_to_chat
+from db.anamnez import anamnez_db
 
 
 def parse_base_answer(model_response: str) -> str:
@@ -98,38 +100,40 @@ async def process_pending_kind(bot:Bot, kind: str):
     MAX_PER_RUN = 300
     sent = 0
     for row_id, med_id, telegram_id, chat_id in tasks:
-
+        sex = await after_tests_db.get_user_sex(telegram_id)
+        anketa = await anamnez_db.get_anketa(telegram_id)
+        age = anketa["age"] if anketa["age"] else -100
         if sent >= MAX_PER_RUN:
             break
 
         if kind == "decode":
 
             result = await after_tests_db.get_results_only(med_id)
+            doc_urls = split_urls_from_cell(result)
             if not result or not str(result).strip():
                 continue
 
-            decode = await after_tests_db.get_decode_only(med_id)
-            if not decode or not str(decode).strip():
-                decode = "Пока нет расшифровки результатов."
+            text_to_manager = "Неопознанная ошибка"
+            check_result, problems = await check_tests_pdf.check_list_result(links=doc_urls, bot= bot, sex=sex, age= age)
+            if check_result == "complete":
+                text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
+                await bot.send_message(
+                    user_id=chat_id,
+                    text=f"Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы."
+                )
+            elif check_result == "need_consult":
+                text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.Порекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
+                await bot.send_message(
+                    user_id=chat_id,
+                    text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                )
 
-            text = (
-                f"Вот результаты ваших анализов:\n{result}\n\n"
-                f"Расшифровка:\n{decode}"
-            )
 
             try:
-                await bot.send_message(chat_id=chat_id, text=text)
                 await after_tests_db.delete_pending_by_id(row_id)
-                user_data = await anamnez_db.get_user(telegram_id)
-                anketa = await  anamnez_db.get_anketa(telegram_id)
-
-                name = user_data["name"] if user_data["name"] else "Не заполнено"
-                age = anketa["age"] if anketa["age"] else -100
-
-                message_text = f"Пользователь (Имя: {name}\nВозраст: {age})\n оставлял заявку на получение консультации по результатам анализов. Только что мы отправили ему результаты.\n({result})\n \n\n#Диалог_{telegram_id}"
-                await send_to_chat(bot= bot, user_id= telegram_id, message_text= message_text )
+                await send_to_chat(bot= bot, user_id= telegram_id, message_text= text_to_manager )
                 sent += 1
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.4)
 
             except Exception as e:
                 print(f"[ERR] sending decode med_id={med_id} chat_id={chat_id}: {e}")
@@ -150,22 +154,6 @@ async def scheduler(bot:Bot):
         await pending_decode_job(bot)
         await asyncio.sleep(7200)  # каждые 2 часа
 
-# def setup_jobs(application):
-#     application.job_queue.run_repeating(
-#         pending_decode_job,
-#         interval=timedelta(minutes=120),
-#         first=1800,
-#         name="pending_decode_job"
-#     )
-#
-#     application.job_queue.run_repeating(
-#         data_base.sync_tests_job,
-#         interval=timedelta(minutes=180),
-#         first=3600,
-#         name="sync_tests_job"
-#     )
-#
-#     print("[DEBUG] jobs:", [j.name for j in application.job_queue.jobs()])
 
 def bold_html(text: str) -> str:
     """

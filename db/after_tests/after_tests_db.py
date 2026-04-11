@@ -538,6 +538,28 @@ async def delete_user_users_max(telegram_id: int):
         )
         await db.commit()
 
+async def set_user_sex(user_id: int, user_name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("""
+            INSERT INTO users_max (telegram_id, user_name)
+            VALUES (?, ?)
+            ON CONFLICT(telegram_id)
+            DO UPDATE SET user_name = excluded.user_name
+        """, (user_id, user_name))
+        await db.commit()
+
+
+async def get_user_sex(user_id: int) -> str | None:
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT user_name
+            FROM users_max
+            WHERE telegram_id = ?
+        """, (user_id,))
+        row = await cursor.fetchone()
+
+    return row[0] if row else None
+
 
 # =========================================================
 # NEURO_DIALOG_STATE
