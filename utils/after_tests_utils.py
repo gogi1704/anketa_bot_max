@@ -115,17 +115,18 @@ async def process_pending_kind(bot:Bot, kind: str):
 
             text_to_manager = "Неопознанная ошибка"
             check_result, problems = await check_tests_pdf.check_list_result(links=doc_urls, bot= bot, sex=sex, age= age)
+            problems_text = await get_text_problems(problems)
             if check_result == "complete":
                 text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
                 await bot.send_message(
-                    user_id=chat_id,
+                    user_id=telegram_id,
                     text=f"Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы."
                 )
             elif check_result == "need_consult":
                 text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.Порекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
                 await bot.send_message(
-                    user_id=chat_id,
-                    text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                    user_id=telegram_id,
+                    text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
                 )
 
 
@@ -170,3 +171,41 @@ async def get_list_and_price(list_tests,tests_price ):
         price += tests_price[test]
 
     return text, price
+
+async def get_text_problems(list_of_lists_dicts: list[list[dict[str, str]]] | None) -> str:
+    print(f"LIST   {list_of_lists_dicts}")
+    if not list_of_lists_dicts:
+        return ""
+
+    text_problems = ""
+    unique_items = set()
+
+    for lists in list_of_lists_dicts:
+        if not lists:
+            continue
+
+        for item in lists:
+            if not item:
+                continue
+
+            problem_name = item.get("name")
+            current_value = item.get("value")
+            norm_value = item.get("norm")
+
+            if not problem_name or current_value is None or norm_value is None:
+                continue
+
+            key = (problem_name, current_value, norm_value)
+
+            if key in unique_items:
+                continue
+
+            unique_items.add(key)
+
+            text_problems += (
+                f"{problem_name}:\n"
+                f"🧍 Ваш показатель — {current_value}\n"
+                f"✅ Норма — {norm_value}\n\n"
+            )
+
+    return text_problems.strip()

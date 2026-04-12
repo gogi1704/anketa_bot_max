@@ -93,12 +93,10 @@ async def check_list_result(links:List[str], sex , age, bot = None):
     all_problem_list = []
     for link in links:
         result, list_problems = await check_one_result(link = link, bot = bot, age=age, sex= sex)
-        all_problem_list.append(list_problems)
         if result == "need_consult":
             all_problem_list.append(list_problems)
 
-    if all_problem_list:
-        print(all_problem_list)
+    if all_problem_list :
         return "need_consult", all_problem_list
 
     else:

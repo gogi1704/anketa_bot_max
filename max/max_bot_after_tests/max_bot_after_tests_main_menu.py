@@ -15,7 +15,7 @@ from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
 from db.after_tests import after_tests_db as db
 from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat
 from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji, parse_base_answer, \
-    replace_wait_with_text, pars_answer_and_data
+    replace_wait_with_text, pars_answer_and_data, get_text_problems
 from doc_funs import send_results_doc_and_text, split_urls_from_cell
 from ai_agents import check_tests_pdf
 
@@ -344,18 +344,18 @@ async def handle_get_med_id_consult(event:MessageCreated, name, age):
         doc_url = await db.get_test_results(number)
 
         if doc_url:
-            await event.message.answer(text=resources.TEXT_NEW_MED_CONSULT_YES)
+            await send_manager_get_consult(event, med_id, user_id, name, age)
             await write_and_sleep(event=event,
                                   chat_id=chat_id,
                                   sleep_time=4)
             await after_tests_main_menu(event)
-            await send_manager_get_consult(event, med_id, user_id, name, age)
+
         else:
             await event.message.answer(text=resources.TEXT_NEW_MED_CONSULT_NO, )
             await write_and_sleep(event=event,
                                   chat_id=chat_id,
                                   sleep_time=4)
-            await after_tests_main_menu(event)
+
 
             await db.add_pending_notification(
                 med_id=int(med_id),
@@ -363,7 +363,7 @@ async def handle_get_med_id_consult(event:MessageCreated, name, age):
                 chat_id=chat_id,
                 kind="decode"
             )
-            await send_manager_get_consult(event, med_id, user_id, name, age)
+            await after_tests_main_menu(event)
 
 async def handle_base_speak(event:MessageCreated, dialog, name, age):
     def add(role, msg):
@@ -812,7 +812,7 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    text= "Ваши результаты находятся в пределах нормы..."
+                    text= "Ваши результаты находятся в пределах нормы."
                 )
             elif check_result == "need_consult":
                 problems_text = await get_text_problems(problems)
@@ -837,39 +837,3 @@ async def complete_dialog(user_id: int, last_text: str):
     await db.delete_dialog(user_id)
     await db.append_answer(user_id, "Assistant", last_text)
 
-async def get_text_problems(list_of_lists_dicts: list[list[dict[str, str]]] | None) -> str:
-    if not list_of_lists_dicts:
-        return ""
-
-    text_problems = ""
-    unique_items = set()
-
-    for lists in list_of_lists_dicts:
-        if not lists:
-            continue
-
-        for item in lists:
-            if not item:
-                continue
-
-            problem_name = item.get("name")
-            current_value = item.get("value")
-            norm_value = item.get("norm")
-
-            if not problem_name or current_value is None or norm_value is None:
-                continue
-
-            key = (problem_name, current_value, norm_value)
-
-            if key in unique_items:
-                continue
-
-            unique_items.add(key)
-
-            text_problems += (
-                f"{problem_name}:\n"
-                f"🧍 Ваш показатель — {current_value}\n"
-                f"✅ Норма — {norm_value}\n\n"
-            )
-
-    return text_problems.strip()
