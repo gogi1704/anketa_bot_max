@@ -4,10 +4,13 @@ import json
 
 from maxapi import Bot
 from maxapi.enums.sender_action import SenderAction
+from maxapi.enums.upload_type import UploadType
 from maxapi.methods.types.sended_message import SendedMessage
+from maxapi.types import InputMedia
+
 from ai_agents import check_tests_pdf
 from db.after_tests import after_tests_db
-from doc_funs import split_urls_from_cell
+from doc_funs import split_urls_from_cell, create_anketa_txt, delete_file
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
 from max.max_bot_chat.max_bot_chat_manager import send_to_chat
 from db.anamnez import anamnez_db
@@ -126,10 +129,14 @@ async def process_pending_kind(bot:Bot, kind: str):
                 )
             elif check_result == "need_consult":
                 text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.Порекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
+                anketa_file_path = await create_anketa_txt(telegram_id)
+                attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
                 await bot.send_message(
                     user_id=telegram_id,
-                    text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                    attachments= attachments,
+                    text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ) для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
                 )
+                await delete_file(anketa_file_path)
 
 
             try:

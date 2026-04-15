@@ -7,6 +7,9 @@ from docx import Document
 from maxapi.enums.upload_type import UploadType
 from maxapi.types import InputMedia
 
+from db.after_tests.after_tests_db import get_user_sex
+from db.anamnez.anamnez_db import get_anketa
+
 GOOGLE_DOC_ID_RE = re.compile(r"/document/d/([a-zA-Z0-9_-]+)")
 
 GOOGLE_DRIVE_FILE_ID_RE = re.compile(
@@ -134,4 +137,55 @@ async def send_results_doc_and_text(event,
                     os.remove(tmp_path)
                 except OSError:
                     pass
+
+def build_anketa_text(anketa: dict, user_sex) -> str:
+    return f"""
+АНКЕТА ПОЛЬЗОВАТЕЛЯ
+
+ID пользователя: {anketa.get("user_id")}
+Организация / ИНН: {anketa.get("organization_or_inn")}
+Дата осмотра: {anketa.get("osmotr_date")}
+Пол: {user_sex}
+Возраст: {anketa.get("age")}
+Вес: {anketa.get("weight")}
+Рост: {anketa.get("height")}
+Курение: {anketa.get("smoking")}
+Алкоголь: {anketa.get("alcohol")}
+Физическая активность: {anketa.get("physical_activity")}
+Гипертония: {anketa.get("hypertension")}
+Потемнение в глазах: {anketa.get("darkening_of_the_eyes")}
+Сахар: {anketa.get("sugar")}
+Боль в суставах: {anketa.get("joint_pain")}
+Хронические заболевания: {anketa.get("chronic_diseases")}
+"""
+
+async def create_anketa_txt(user_id: int) -> str | None:
+    anketa = await get_anketa(user_id)
+    user_sex = await get_user_sex(user_id)
+    if not anketa:
+        return None
+    if user_sex is None or user_sex == "":
+        user_sex = "Нет данных"
+    anketa_text = build_anketa_text(anketa, user_sex)
+
+    filename = f"anketa_{user_id}.txt"
+
+    temp_dir = tempfile.gettempdir()
+    file_path = os.path.join(temp_dir, filename)
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(anketa_text)
+
+    return file_path
+
+
+async def delete_file(file_path: str) -> bool:
+    try:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+            return True
+        return False
+    except Exception as e:
+        print(f"Ошибка при удалении файла {file_path}: {e}")
+        return False
 
