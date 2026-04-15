@@ -41,9 +41,13 @@ async def handle_text_message_after_tests(event:MessageCreated):
     user_data = await anamnez_db.get_user(user_id)
     anketa = await  anamnez_db.get_anketa(user_id)
     sex = await db.get_user_sex(user_id)
+    age = 0
+    name = "Не заполнено"
+    if user_data:
+        name = user_data["name"] if user_data["name"] else "Не заполнено"
 
-    name = user_data["name"] if user_data["name"] else "Не заполнено"
-    age = anketa["age"] if anketa["age"] else -100
+    if anketa:
+        age = anketa["age"] if anketa["age"] else 0
 
     if state == dialog_states["stat_inn"]:
         report = await anamnez_db.get_report_by_inn(text)

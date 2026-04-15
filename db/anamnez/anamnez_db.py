@@ -993,6 +993,7 @@ async def get_unique_organizations_report_since_date(date_from: str | datetime.d
 
     final_report = await get_report_by_inns(organizations)
     print(organizations)
+    print(f"Всего инн {len(organizations)}")
     print(final_report)
 
     # for index, org in enumerate(organizations, start=1):
@@ -1009,3 +1010,42 @@ async def get_unique_organizations_report_since_date(date_from: str | datetime.d
     # report_lines.append(", ".join(map(str, user_ids)))
 
     return "\n".join(report_lines)
+
+
+async def get_dop_tests_stats() -> str:
+    """
+    Получает все анкеты из user_data,
+    считает количество уникальных значений в get_dop_tests
+    и возвращает строку вида:
+
+    Почки - 33
+    Лишний вес - 22
+    ...
+    """
+
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT get_dop_tests
+            FROM user_data
+            WHERE get_dop_tests IS NOT NULL
+              AND TRIM(get_dop_tests) != ''
+        """)
+        rows = await cursor.fetchall()
+
+    counter = Counter()
+
+    for row in rows:
+        raw_value = row[0]
+
+        # если в одном поле несколько значений через запятую
+        tests = [x.strip() for x in raw_value.split(",") if x.strip()]
+
+        for test in tests:
+            counter[test] += 1
+
+    # сортировка по убыванию количества
+    sorted_items = sorted(counter.items(), key=lambda x: x[1], reverse=True)
+
+    result = "\n".join(f"{name} - {count}" for name, count in sorted_items)
+
+    return result

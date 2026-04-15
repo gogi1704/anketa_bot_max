@@ -102,7 +102,9 @@ async def process_pending_kind(bot:Bot, kind: str):
     for row_id, med_id, telegram_id, chat_id in tasks:
         sex = await after_tests_db.get_user_sex(telegram_id)
         anketa = await anamnez_db.get_anketa(telegram_id)
-        age = anketa["age"] if anketa["age"] else -100
+        age = 0
+        if anketa:
+            age = anketa["age"] if anketa["age"] else 0
         if sent >= MAX_PER_RUN:
             break
 

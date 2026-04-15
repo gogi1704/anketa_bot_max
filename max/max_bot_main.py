@@ -12,7 +12,8 @@ from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_t
 from maxapi import Dispatcher, Bot
 from maxapi.types import (
     Command, BotCommand, )
-from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date
+from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
+    get_dop_tests_statistic
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
@@ -33,9 +34,13 @@ async def callback_router(event: MessageCallback):
 
     user_data = await anamnez_db.get_user(user_id)
     anketa = await  anamnez_db.get_anketa(user_id)
+    age = 0
+    name = "Не заполнено"
+    if anketa:
+        age = anketa["age"] if anketa["age"] else 0
+    if user_data:
+        name = user_data["name"] if user_data["name"] else "Не заполнено"
 
-    name = user_data["name"] if user_data["name"] else "Не заполнено"
-    age = anketa["age"] if anketa["age"] else -100
     # Закрываем "loading" кнопки
     # await event.answer()
 #__________________________________________________________________________________________________
@@ -147,6 +152,9 @@ async def get_stat_inn(event: MessageCreated):
 async def get_stat_inn_by_date(event: MessageCreated):
     await get_statistic_inn_by_date(event)
 
+@dp.message_created(Command("get_dop_tests_stat"))
+async def get_dop_tests_stat(event: MessageCreated):
+    await get_dop_tests_statistic(event)
 
 @dp.message_created()
 async def text_handler(event: MessageCreated):
