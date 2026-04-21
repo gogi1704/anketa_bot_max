@@ -773,6 +773,7 @@ async def handle_after_good_tests_yes_no(event: MessageCallback):
 
 
 async def send_manager_get_decode(event, med_id, user_id, sex, age):
+    chat_id, user_id = event.get_ids()
     try:
         await event.bot.send_message(user_id=user_id, text= "Пожалуйста, подождите несколько минут. Обычно анализ занимает до 3 минут.Спасибо за понимание.")
         doc_url = await db.get_test_results(int(med_id))
@@ -803,10 +804,11 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
                            message_text= text_to_manager)
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
-        await write_and_sleep(event = event, chat_id= user_id, sleep_time= 2)
+        await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
         await after_tests_main_menu(event)
 
 async def send_manager_get_consult(event, med_id, user_id, sex, age):
+    chat_id, user_id = event.get_ids()
     try:
         await event.bot.send_message(user_id=user_id, text= "Пожалуйста, подождите несколько минут. Обычно анализ занимает до 3 минут.Спасибо за понимание.")
         doc_url = await db.get_test_results(int(med_id))
@@ -838,7 +840,7 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
                            message_text=text_to_manager)
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
-        await write_and_sleep(event = event, chat_id= user_id, sleep_time= 2)
+        await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
         await after_tests_main_menu(event)
 
 

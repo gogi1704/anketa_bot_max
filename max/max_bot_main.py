@@ -13,7 +13,7 @@ from maxapi import Dispatcher, Bot
 from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
-    get_dop_tests_statistic
+    get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
@@ -155,6 +155,14 @@ async def get_stat_inn_by_date(event: MessageCreated):
 @dp.message_created(Command("get_dop_tests_stat"))
 async def get_dop_tests_stat(event: MessageCreated):
     await get_dop_tests_statistic(event)
+
+@dp.message_created(Command("send_post_with_bt"))
+async def send_post_with_bt(event: MessageCreated):
+    await handle_send_post_with_bt(event)
+
+@dp.message_created(Command("send_post_without_bt"))
+async def send_post_without_bt(event: MessageCreated):
+    await handle_send_post_without_bt(event)
 
 @dp.message_created()
 async def text_handler(event: MessageCreated):

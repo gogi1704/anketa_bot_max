@@ -584,7 +584,11 @@ dialog_states = {
 
     # статистика
     "stat_inn": "50",
-    "get_stat_inn_by_date": "51"
+    "get_stat_inn_by_date": "51",
+
+    # Посты
+    "send_post_with_bt":"60",
+    "send_post_without_bt":"61"
 
 }
 

@@ -11,6 +11,8 @@ def kb_tests_main_menu():
     builder.row(CallbackButton(text="📊 Расшифровка показателей", payload="tests_main_menu_get_decode"))
     builder.row(CallbackButton(text="🩺 Консультация по результатам анализов", payload="tests_main_menu_consult_med"))
     builder.row(CallbackButton(text="🤖 Поддержка Челика", payload="tests_main_menu_consult_neuro"))
+    builder.row(LinkButton(text="Самый полезный канал в Max",
+                           url=f"https://max.ru/join/e1EbeWGW5wqMzQem_0ADl_1-S3MsUKwj-Dx5AbkZ0Do"))
 
     return builder.as_markup()
 
@@ -60,5 +62,18 @@ def kb_get_your_sex():
     builder = InlineKeyboardBuilder()
     builder.row(CallbackButton(text= "Мужчина",payload= "get_your_sex_man"))
     builder.row(CallbackButton(text="Женщина", payload="get_your_sex_woman"))
+
+    return builder.as_markup()
+
+def kb_send_post_without_bt():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
+
+    return builder.as_markup()
+
+def kb_send_post_with_bt():
+    builder = InlineKeyboardBuilder()
+    builder.row(LinkButton(text= "Открыть сообщество", url="https://max.ru/join/e1EbeWGW5wqMzQem_0ADl_1-S3MsUKwj-Dx5AbkZ0Do" ))
+    builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
 
     return builder.as_markup()

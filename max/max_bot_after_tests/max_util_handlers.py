@@ -42,3 +42,29 @@ async def get_dop_tests_statistic(event: MessageCreated):
             chat_id=chat_id,
             text= result
         )
+
+async def handle_send_post_with_bt (event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+
+    await db.set_neuro_dialog_states(
+        user_id,
+        resources.dialog_states["send_post_with_bt"]
+    )
+
+    await event.bot.send_message(
+        chat_id=chat_id,
+        text= "Пришлите пост и он будет отправлен с кнопками! (Наш канал и Главное меню)",
+    )
+
+async def handle_send_post_without_bt(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+
+    await db.set_neuro_dialog_states(
+        user_id,
+        resources.dialog_states["send_post_without_bt"]
+    )
+
+    await event.bot.send_message(
+        chat_id=chat_id,
+        text= "Пришлите пост и он будет с одной кнопкой! (Главное меню)",
+    )
