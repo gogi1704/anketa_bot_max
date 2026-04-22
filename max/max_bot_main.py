@@ -93,8 +93,8 @@ async def callback_router(event: MessageCallback):
         await after_tests_main_menu(event)
         return
 
-    if payload.startswith("pay"):
-        await handle_pay(event)
+    # if payload.startswith("pay"):
+    #     await handle_pay(event)
 
     if payload.startswith("get_your_sex_"):
         await handle_get_your_sex(event)

@@ -8,7 +8,7 @@ from maxapi.types import MessageCallback, MessageCreated, InputMedia
 from ai_agents import open_ai_main
 from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYSTEM_PROMPT, BOSS_COLLECT_SYSTEM_PROMPT
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import \
-    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_go_to_main_menu
+    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_go_to_main_menu, kb_statistic_inn_close
 from max.max_bot_anamnez.max_bot_navigation import choose_tests
 
 import resources
@@ -244,6 +244,41 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
             answer
         )
 
+    elif data == "tests_main_menu_connect_result_number":
+        await db.set_neuro_dialog_states(user_id, resources.dialog_states["connect_med_id"])
+        await event.bot.send_message(
+            user_id=user_id,
+            text=resources.TEXT_TESTS_GET_ID,
+            attachments= [kb_statistic_inn_close()]
+        )
+
+async def handle_connect_med_id(event:MessageCreated):
+    chat_id, user_id = event.get_ids()
+    med_id = event.message.body.text
+    number = parse_int(med_id)
+    if number is None:
+        await event.message.answer(
+            text= "❌ Нужно ввести целое число.\nПопробуйте ещё раз, или отмените ввод с помощью кнопки.",
+            attachments= [kb_statistic_inn_close()]
+        )
+        return
+    else:
+        await event.message.answer(
+            text= """Номер пробирки успешно привязан к вашему аккаунту.Теперь вы можете получить:
+• результаты анализов
+• расшифровку значений
+• бесплатную консультацию с врачом""",
+        )
+        await db.create_dialog_user_with_med_id(user_id, med_id)
+        await db.delete_neuro_dialog_states(user_id)
+
+
+        await write_and_sleep(event, chat_id, 3)
+        await event.bot.send_message(
+            user_id=user_id,
+            text=resources.TEXT_TESTS_MAIN_MENU,
+            attachments=[tests_keyboards.kb_tests_main_menu()]
+        )
 
 async def handle_get_med_id(event:MessageCreated):
     chat_id, user_id = event.get_ids()
@@ -785,7 +820,7 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    text= "Ваши результаты находятся в пределах нормы."
+                    text= "Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩 Связаться со специалистом: +7 918 522-67-09"
                 )
             elif check_result == "need_consult":
                 problems_text = await get_text_problems(problems)
@@ -820,7 +855,7 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    text= "Ваши результаты находятся в пределах нормы."
+                    text= "Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩 Связаться со специалистом: +7 918 522-67-09"
                 )
             elif check_result == "need_consult":
                 problems_text = await get_text_problems(problems)

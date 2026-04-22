@@ -6,6 +6,7 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 def kb_tests_main_menu():
     builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text="🪢 Привязать пробирку", payload="tests_main_menu_connect_result_number"))
     builder.row(CallbackButton(text= "🧪 Сдать Анализы",payload= "tests_main_menu_make_tests"))
     builder.row(CallbackButton(text="🧪 Получить результаты анализов", payload="tests_main_menu_get_tests"))
     builder.row(CallbackButton(text="📊 Расшифровка показателей", payload="tests_main_menu_get_decode"))

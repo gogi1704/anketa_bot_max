@@ -11,6 +11,7 @@ from max.max_bot_after_tests import max_bot_after_tests_main_menu
 from utils import util_fins
 import asyncio
 from ai_agents.open_ai_main import get_gpt_answer
+from utils.after_tests_utils import write_and_sleep
 from utils.anketa_utils import *
 from maxapi.types.attachments.buttons import MessageButton, CallbackButton
 from max.max_bot_chat import max_bot_chat_manager
@@ -177,18 +178,6 @@ async def handle_text_message_anamnez(event: MessageCreated, context_data: Memor
     elif state == resources.dialog_states_dict['new_branch_another_problems']:
         await new_branch_dialog_another_problems(event)
 
-    #
-    # elif state == resources.dialog_states_dict['terapevt_consult']:
-    #     await terapevt_consult_dialog(event)
-    #
-    # # elif state == resources.dialog_states_dict['change_anketa']:
-    # #     await change_anketa_dialog(event)
-    #
-    # elif state == resources.dialog_states_dict['is_ready_to_consult']:
-    #     await is_ready_to_consult_dialog(event)
-    #
-    # elif state == resources.dialog_states_dict['get_number']:
-    #     await get_number_dialog(event)
 
     elif state == resources.dialog_states_dict['new_state']:
         user = await anamnez_db.get_user(user_id)
@@ -1198,7 +1187,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             f"Обследования: {chosen_str}"
         )
 
-        await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
+        # await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
 
         # удаляем сообщение с кнопками
         try:
@@ -1223,18 +1212,24 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             manager_msg_id=resources.STATES_USERS_FINALS['victory']
         )
 
-        builder = InlineKeyboardBuilder()
-        builder.row(CallbackButton(text="Оплатить онлайн", payload="pay_yes"),
-                    CallbackButton(text="Оплатить позже", payload="pay_no"))
         await context_data.clear()
         await event.bot.send_message(
             chat_id=chat_id,
             text=resources.get_final_text_tests_with_price2(
                 tests=text,
                 price=price
-            ),
-            attachments= [builder.as_markup()]
+            )
         )
+        await write_and_sleep(event,chat_id,4)
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text= resources.text_instruction_add_number
+        )
+
+        await write_and_sleep(event, chat_id, 4)
+        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+
 
     elif payload == "skip_tests":
         try:
@@ -1248,38 +1243,38 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
 
     return None
 
-async def handle_pay(event:MessageCallback):
-    chat_id, user_id = event.get_ids()
-    payload = event.callback.payload
-
-    if payload == "pay_yes":
-        await anamnez_db.set_privacy_policy_date(user_id= user_id, value= "pay_yes")
-
-        await event.bot.send_message(
-            chat_id=chat_id,
-            text= resources.text_new_branch_handle_pay_yes
-        )
-        await event.bot.send_action(
-            chat_id=chat_id,
-            action=SenderAction.TYPING_ON
-        )
-
-        await asyncio.sleep(2)
-        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
-
-    elif payload == "pay_no":
-        await anamnez_db.set_privacy_policy_date(user_id= user_id, value= "pay_no")
-        await event.bot.send_message(
-            chat_id=chat_id,
-            text= resources.text_new_branch_handle_pay_no
-        )
-        await event.bot.send_action(
-            chat_id=chat_id,
-            action=SenderAction.TYPING_ON
-        )
-
-        await asyncio.sleep(2)
-        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+# async def handle_pay(event:MessageCallback):
+#     chat_id, user_id = event.get_ids()
+#     payload = event.callback.payload
+#
+#     if payload == "pay_yes":
+#         await anamnez_db.set_privacy_policy_date(user_id= user_id, value= "pay_yes")
+#
+#         await event.bot.send_message(
+#             chat_id=chat_id,
+#             text= resources.text_new_branch_handle_pay_yes
+#         )
+#         await event.bot.send_action(
+#             chat_id=chat_id,
+#             action=SenderAction.TYPING_ON
+#         )
+#
+#         await asyncio.sleep(2)
+#         await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+#
+#     elif payload == "pay_no":
+#         await anamnez_db.set_privacy_policy_date(user_id= user_id, value= "pay_no")
+#         await event.bot.send_message(
+#             chat_id=chat_id,
+#             text= resources.text_new_branch_handle_pay_no
+#         )
+#         await event.bot.send_action(
+#             chat_id=chat_id,
+#             action=SenderAction.TYPING_ON
+#         )
+#
+#         await asyncio.sleep(2)
+#         await max_bot_after_tests_main_menu.after_tests_main_menu(event)
 
 
 async def handle_consent(event: MessageCallback, payload: str):
