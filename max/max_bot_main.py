@@ -201,6 +201,7 @@ async def main():
     asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
     asyncio.create_task(anamnez_db.periodic_sync())
     asyncio.create_task(scheduler(bot))
+    asyncio.create_task(osmotr_notification_scheduler(bot))
 
     # прогрев GPT
     await get_gpt_answer("test", "test", bot=bot)

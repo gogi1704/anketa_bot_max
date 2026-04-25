@@ -1187,7 +1187,7 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
             f"Обследования: {chosen_str}"
         )
 
-        # await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
+        await max_bot_chat_manager.send_to_chat(event.bot, user_id, text_to_manager)
 
         # удаляем сообщение с кнопками
         try:

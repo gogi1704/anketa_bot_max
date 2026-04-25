@@ -1,6 +1,13 @@
-from datetime import datetime
+from maxapi import Bot
+import asyncio
 import resources
 from ai_agents import prompts, open_ai_main
+from db.anamnez.anamnez_db import get_all_anketas
+from datetime import datetime, timedelta
+from maxapi.exceptions.max import MaxApiError
+
+from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
+from max.max_bot_chat import max_bot_chat_manager
 
 BACK_BUTTON = "⬅️ Назад"
 
@@ -163,3 +170,90 @@ async def question_hronic(dialog, bot):
     user_prompt = prompts.user_prompt_check_hronic_question.format(dialog=dialog)
     agent_check = await open_ai_main.get_gpt_answer(system_prompt= prompts.system_prompt_check_hronic_question, user_prompt=user_prompt, bot= bot)
     return agent_check
+
+async def get_users_with_osmotr_tomorrow() -> list[dict]:
+    anketas = await get_all_anketas()
+
+    tomorrow = (datetime.now(resources.MOSCOW_TZ) + timedelta(days=1)).date()
+    result = []
+
+    for anketa in anketas:
+        osmotr_date_raw = anketa.get("osmotr_date")
+
+        if not osmotr_date_raw:
+            continue
+
+        try:
+            osmotr_date = datetime.strptime(
+                str(osmotr_date_raw).strip(),
+                "%d.%m.%Y"
+            ).date()
+        except ValueError:
+            print(f"Некорректный формат даты у user_id={anketa.get('user_id')}: {osmotr_date_raw}")
+            continue
+
+        if osmotr_date == tomorrow:
+            result.append(anketa)
+    return result
+
+async def send_osmotr_tomorrow_notifications(bot:Bot):
+    users = await get_users_with_osmotr_tomorrow()
+
+    if not users:
+        print("Нет пользователей с осмотром завтра")
+        return
+    users_count = len(users)
+    for user in users:
+        user_id = user["user_id"]
+        osmotr_date = user["osmotr_date"]
+
+        text = (
+            f"Здравствуйте!\n\n"
+            f"Напоминаем, что завтра у вас запланирован медицинский осмотр.\n"
+            f"Дата осмотра: {osmotr_date}"
+        )
+
+        try:
+            await bot.send_message(
+                user_id=user_id,
+                text=text,
+                attachments= [kb_go_to_main_menu()]
+
+            )
+
+        except MaxApiError as e:
+            users_count -= 1
+            raw = getattr(e, "raw", {}) or {}
+
+            if getattr(e, "code", None) == 403 and raw.get("code") == "chat.denied":
+                print(f"Нельзя отправить сообщение user_id={user_id}: {raw}")
+                continue
+
+            print(f"Ошибка отправки user_id={user_id}: {e}")
+            continue
+
+        except Exception as e:
+            users_count -= 1
+            print(f"Неизвестная ошибка отправки user_id={user_id}: {e}")
+            continue
+
+    await max_bot_chat_manager.send_to_chat(bot, user_id = 206156549, message_text= f"Напоминания отправлены пользователям.\nВсего найдено пользователей: {len(users)}\nУспешно отправлено: {users_count}")
+
+async def osmotr_notification_scheduler(bot):
+    while True:
+        now = datetime.now(resources.MOSCOW_TZ)
+
+        next_run = now.replace(hour=7, minute=0, second=0, microsecond=0)
+
+        if now >= next_run:
+            next_run += timedelta(days=1)
+
+        sleep_seconds = (next_run - now).total_seconds()
+
+        print(f"Следующая проверка уведомлений: {next_run}")
+        await asyncio.sleep(sleep_seconds)
+
+        try:
+            await send_osmotr_tomorrow_notifications(bot)
+        except Exception as e:
+            print(f"Ошибка в osmotr_notification_scheduler: {e}")

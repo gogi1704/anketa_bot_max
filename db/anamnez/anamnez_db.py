@@ -526,6 +526,21 @@ async def get_anketa(user_id: int) -> dict | None:
             return dict(zip(columns, row))
         return None
 
+async def get_all_anketas() -> list[dict]:
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT * FROM user_anketa
+        """)
+        rows = await cursor.fetchall()
+
+    columns = [
+        "user_id", "organization_or_inn", "osmotr_date", "age", "weight", "height",
+        "smoking", "alcohol", "physical_activity",
+        "hypertension", "darkening_of_the_eyes", "sugar", "joint_pain", "chronic_diseases"
+    ]
+
+    return [dict(zip(columns, row)) for row in rows]
+
 async def delete_anketa(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
