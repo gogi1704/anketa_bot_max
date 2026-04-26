@@ -8,7 +8,7 @@ from maxapi.types import MessageCallback, MessageCreated, InputMedia
 from ai_agents import open_ai_main
 from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYSTEM_PROMPT, BOSS_COLLECT_SYSTEM_PROMPT
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import \
-    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_go_to_main_menu, kb_statistic_inn_close
+    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_statistic_inn_close
 from max.max_bot_anamnez.max_bot_navigation import choose_tests
 
 import resources
@@ -16,7 +16,7 @@ from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
 from db.after_tests import after_tests_db as db
 from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat
 from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji, parse_base_answer, \
-    replace_wait_with_text, pars_answer_and_data, get_text_problems
+    replace_wait_with_text, pars_answer_and_data
 from doc_funs import send_results_doc_and_text, split_urls_from_cell, create_anketa_txt, delete_file
 from ai_agents import check_tests_pdf
 
@@ -820,18 +820,17 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    text= "Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩 Связаться со специалистом: +7 918 522-67-09"
+                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно по номеру : +7 918 522-67-09\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
             elif check_result == "need_consult":
-                problems_text = await get_text_problems(problems)
-                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения:\n{problems_text}\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 anketa_file_path = await create_anketa_txt(user_id)
-                attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
 
+                attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
                 await event.bot.send_message(
                     user_id= user_id,
-                    attachments=attachments,
-                    text= f"У вас есть следующие отклонения от нормы: \n{problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ) для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                    attachments= attachments,
+                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩 Связаться в МАХ со специалистом можно по номеру : +7 918 522-67-09\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
         await send_to_chat(event= event,
@@ -855,18 +854,16 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    text= "Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩 Связаться со специалистом: +7 918 522-67-09"
+                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩 Связаться в МАХ со специалистом можно по номеру : +7 918 522-67-09\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
             elif check_result == "need_consult":
-                problems_text = await get_text_problems(problems)
-                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения:\n{problems_text}\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+                text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 anketa_file_path = await create_anketa_txt(user_id)
                 attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-
                 await event.bot.send_message(
                     user_id= user_id,
-                    attachments=attachments,
-                    text=f"У вас есть следующие отклонения от нормы: \n{problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ) для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
+                    attachments=attachments ,
+                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩 Связаться в МАХ со специалистом можно по номеру : +7 918 522-67-09\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
 

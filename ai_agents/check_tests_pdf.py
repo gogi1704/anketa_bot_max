@@ -104,13 +104,3 @@ async def check_list_result(links:List[str], sex , age, bot = None):
         return "complete", None
 
 
-
-
-# if __name__ == "__main__":
-#     links = [
-#         "https://drive.google.com/file/d/1t5bBP1MfcOkyFgGwcm0zPDlnBCoZ9WOV/view?usp=drivesdk",
-#
-#     ]
-#
-#     asyncio.run(check_list_result(links= links))
-
