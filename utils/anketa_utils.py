@@ -205,18 +205,11 @@ async def send_osmotr_tomorrow_notifications(bot:Bot):
     users_count = len(users)
     for user in users:
         user_id = user["user_id"]
-        osmotr_date = user["osmotr_date"]
-
-        text = (
-            f"Здравствуйте!\n\n"
-            f"Напоминаем, что завтра у вас запланирован медицинский осмотр.\n"
-            f"Дата осмотра: {osmotr_date}"
-        )
 
         try:
             await bot.send_message(
                 user_id=user_id,
-                text=text,
+                text=resources.TEXT_REMINDER,
                 attachments= [kb_go_to_main_menu()]
 
             )
