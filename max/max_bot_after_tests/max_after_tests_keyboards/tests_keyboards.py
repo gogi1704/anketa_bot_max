@@ -19,7 +19,7 @@ def kb_tests_main_menu():
 
 def kb_check_up_start():
     builder = InlineKeyboardBuilder()
-    builder.row(LinkButton(text= "Ознакомиться с комплексами",url=f"https://telegra.ph/CHek-apy-po-laboratorii-OOO-CHelovek-02-06?ver={int(datetime.now().timestamp())}"))
+    builder.row(LinkButton(text= "Ознакомиться с комплексами",url=f"https://docs.google.com/document/d/1oEsDgDVVocJ9pQWVc6iH08T5kFT85qWv1y-in_BV0PY/edit?usp=sharing"))
     builder.row(CallbackButton(text="Добавить обследования", payload="сheck_up_start_add"))
     builder.row(CallbackButton(text="Выйти", payload="сheck_up_start_back"))
 

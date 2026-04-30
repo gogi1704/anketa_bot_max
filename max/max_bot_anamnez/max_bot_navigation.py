@@ -3,7 +3,7 @@ from typing import Any
 import datetime
 from maxapi.context import MemoryContext
 from maxapi.enums.sender_action import SenderAction
-from maxapi.types import BotStarted
+from maxapi.types import BotStarted, LinkButton
 from maxapi.types import MessageCreated, MessageCallback
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -1225,6 +1225,17 @@ async def handle_toggle(event:MessageCallback, context_data: MemoryContext):
         await event.bot.send_message(
             chat_id=chat_id,
             text= resources.text_instruction_add_number
+        )
+
+        await write_and_sleep(event, chat_id, 4)
+        builder = InlineKeyboardBuilder()
+        builder.row(LinkButton(text="Открыть канал",
+                               url=f"https://max.ru/join/e1EbeWGW5wqMzQem_0ADl_1-S3MsUKwj-Dx5AbkZ0Do"))
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text= resources.text_channel,
+            attachments= [builder.as_markup()]
         )
 
         await write_and_sleep(event, chat_id, 4)

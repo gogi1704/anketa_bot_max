@@ -1001,9 +1001,7 @@ async def get_unique_organizations_report_since_date(date_from: str | datetime.d
         "",
         f"Дата начала: {date_from}",
         f"Новых пользователей: {users_count}",
-        f"Уникальных организаций/ИНН: {organizations_count}",
-        "",
-        "Уникальные organization_or_inn:",
+        f"Уникальных организаций/ИНН: {organizations_count}"
     ]
 
     final_report = await get_report_by_inns(organizations)

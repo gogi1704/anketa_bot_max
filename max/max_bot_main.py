@@ -9,7 +9,7 @@ from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_tests_main_menu, handle_start_check_up, \
     handle_decode_yes_no, handle_after_good_tests_yes_no, after_tests_main_menu, handle_empty_decode
-from maxapi import Dispatcher, Bot
+from maxapi import Dispatcher
 from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
@@ -53,6 +53,16 @@ async def callback_router(event: MessageCallback):
     if payload.startswith("toggle:") or payload == "done" or payload == "skip_tests":
         is_after_tests =  await handle_toggle(event, context_manager.get(chat_id, user_id))
         if is_after_tests:
+            builder = InlineKeyboardBuilder()
+            builder.row(LinkButton(text="Открыть канал",
+                                   url=f"https://max.ru/join/e1EbeWGW5wqMzQem_0ADl_1-S3MsUKwj-Dx5AbkZ0Do"))
+
+            await event.bot.send_message(
+                chat_id=chat_id,
+                text=resources.text_channel,
+                attachments=[builder.as_markup()]
+            )
+            await write_and_sleep(event, chat_id, 4)
             await after_tests_main_menu(event)
         return
 
