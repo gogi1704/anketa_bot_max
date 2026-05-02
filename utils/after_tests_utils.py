@@ -112,34 +112,40 @@ async def process_pending_kind(bot:Bot, kind: str):
             break
 
         if kind == "decode":
-
-            result = await after_tests_db.get_results_only(med_id)
-            doc_urls = split_urls_from_cell(result)
-            if not result or not str(result).strip():
-                continue
-
-            text_to_manager = "Неопознанная ошибка"
-            check_result, problems = await check_tests_pdf.check_list_result(links=doc_urls, bot= bot, sex=sex, age= age)
-            problems_text = await get_text_problems(problems)
-            if check_result == "complete":
-                text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
-                await bot.send_message(
-                    user_id=telegram_id,
-                    text=f"Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩 Связаться со специалистом: +7 918 522-67-09"
-                )
-            elif check_result == "need_consult":
-                text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.Порекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
-                anketa_file_path = await create_anketa_txt(telegram_id)
-                attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-                await bot.send_message(
-                    user_id=telegram_id,
-                    attachments= attachments,
-                    text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ) для более детального разбора ваших отклонений.\n📩 Связаться со специалистом: +7 918 522-67-09"
-                )
-                await delete_file(anketa_file_path)
-
-
             try:
+                result = await after_tests_db.get_results_only(med_id)
+                doc_urls = split_urls_from_cell(result)
+                if not result or not str(result).strip():
+                    continue
+
+                text_to_manager = "Неопознанная ошибка"
+
+                text_to_manager = f"(pending)Пользователь получил результаты в автоматическом режиме.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
+                await bot.send_message(
+                    chat_id=telegram_id,
+                    text=f"Вот результаты ваших анализов:\n{result}.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"
+                )
+            # check_result, problems = await check_tests_pdf.check_list_result(links=doc_urls, bot= bot, sex=sex, age= age)
+            # problems_text = await get_text_problems(problems)
+            # if check_result == "complete":
+            #     text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
+            #     await bot.send_message(
+            #         user_id=telegram_id,
+            #         text=f"Вот результаты ваших анализов:\n{result}\n\nВаши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"
+            #     )
+            # elif check_result == "need_consult":
+            #     text_to_manager = f"(pending)Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.Порекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
+            #     anketa_file_path = await create_anketa_txt(telegram_id)
+            #     attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+            #     await bot.send_message(
+            #         user_id=telegram_id,
+            #         attachments= attachments,
+            #         text=f"Вот результаты ваших анализов:\n{result}\n\nУ вас есть следующие отклонения от нормы {problems_text}\n\nЯ рекомендую отправить это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ) для более детального разбора ваших отклонений.\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs или нажав на кнопку под этим сообщением."
+            #     )
+            #     await delete_file(anketa_file_path)
+
+
+
                 await after_tests_db.delete_pending_by_id(row_id)
                 await send_to_chat(bot= bot, user_id= telegram_id, message_text= text_to_manager )
                 sent += 1
@@ -148,7 +154,7 @@ async def process_pending_kind(bot:Bot, kind: str):
             except Exception as e:
                 print(f"[ERR] sending decode med_id={med_id} chat_id={chat_id}: {e}")
                 continue
-
+    print(f"Отправлено пендингов: {sent}")
 
 async def pending_decode_job(bot:Bot):
     if _pending_decode_lock.locked():
@@ -162,7 +168,7 @@ async def scheduler(bot:Bot):
     while True:
         await after_tests_db.sync_tests_job()
         await pending_decode_job(bot)
-        await asyncio.sleep(7200)  # каждые 2 часа
+        await asyncio.sleep(21600)  # каждые 6 часа
 
 
 def bold_html(text: str) -> str:

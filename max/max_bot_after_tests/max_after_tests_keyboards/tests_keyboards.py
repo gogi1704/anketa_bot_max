@@ -78,3 +78,9 @@ def kb_send_post_with_bt():
     builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
 
     return builder.as_markup()
+
+def kb_to_doc_chat():
+    builder = InlineKeyboardBuilder()
+    builder.row(LinkButton(text="💬 Связь с специалистом",  url= "https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"))
+
+    return builder.as_markup()
