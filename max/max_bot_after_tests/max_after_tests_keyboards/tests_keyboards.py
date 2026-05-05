@@ -12,6 +12,7 @@ def kb_tests_main_menu():
     builder.row(CallbackButton(text="📊 Расшифровка показателей", payload="tests_main_menu_get_decode"))
     builder.row(CallbackButton(text="🩺 Консультация по результатам анализов", payload="tests_main_menu_consult_med"))
     builder.row(CallbackButton(text="🤖 Поддержка Челика", payload="tests_main_menu_consult_neuro"))
+    builder.row(CallbackButton(text="Ваш врач", payload="doctor_info"))
     builder.row(LinkButton(text="Самый полезный канал в Max",
                            url=f"https://max.ru/join/e1EbeWGW5wqMzQem_0ADl_1-S3MsUKwj-Dx5AbkZ0Do"))
 
@@ -82,6 +83,7 @@ def kb_send_post_with_bt():
 def kb_to_doc_chat():
     builder = InlineKeyboardBuilder()
     builder.row(LinkButton(text="💬 Связь с специалистом",  url= "https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"))
+    builder.row(CallbackButton(text="Подробнее о враче", payload="doctor_info"))
 
     return builder.as_markup()
 

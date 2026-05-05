@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from db.db_utils import update_db
-from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex
+from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex, handle_get_doctor_info
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from max.max_bot_chat import max_bot_cha_manager_after_tests
 from utils.after_tests_utils import scheduler
@@ -105,6 +105,10 @@ async def callback_router(event: MessageCallback):
 
     # if payload.startswith("pay"):
     #     await handle_pay(event)
+
+    if payload.startswith("doctor_info"):
+        await handle_get_doctor_info(event)
+        return
 
     if payload.startswith("get_your_sex_"):
         await handle_get_your_sex(event)

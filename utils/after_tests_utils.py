@@ -11,7 +11,7 @@ from maxapi.types import InputMedia
 from ai_agents import check_tests_pdf
 from db.after_tests import after_tests_db
 from doc_funs import split_urls_from_cell, create_anketa_txt, delete_file
-from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
+from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu, kb_to_doc_chat
 from max.max_bot_chat.max_bot_chat_manager import send_to_chat
 from db.anamnez import anamnez_db
 
@@ -123,7 +123,9 @@ async def process_pending_kind(bot:Bot, kind: str):
                 text_to_manager = f"(pending)Пользователь получил результаты в автоматическом режиме.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
                 await bot.send_message(
                     chat_id=telegram_id,
+                    attachments= kb_to_doc_chat(),
                     text=f"Вот результаты ваших анализов:\n{result}.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"
+
                 )
             # check_result, problems = await check_tests_pdf.check_list_result(links=doc_urls, bot= bot, sex=sex, age= age)
             # problems_text = await get_text_problems(problems)

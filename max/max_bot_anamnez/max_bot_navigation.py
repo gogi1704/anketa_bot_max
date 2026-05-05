@@ -9,7 +9,6 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 from max.max_bot_after_tests import max_bot_after_tests_main_menu
 from utils import util_fins
-import asyncio
 from ai_agents.open_ai_main import get_gpt_answer
 from utils.after_tests_utils import write_and_sleep
 from utils.anketa_utils import *
