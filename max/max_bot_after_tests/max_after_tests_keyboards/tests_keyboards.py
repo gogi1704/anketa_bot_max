@@ -84,3 +84,11 @@ def kb_to_doc_chat():
     builder.row(LinkButton(text="💬 Связь с специалистом",  url= "https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"))
 
     return builder.as_markup()
+
+def kb_price():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text= "Единоразовая консультация",payload= "price_once"))
+    builder.row(CallbackButton(text="Месячная подписка", payload="price_month"))
+    builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
+
+    return builder.as_markup()

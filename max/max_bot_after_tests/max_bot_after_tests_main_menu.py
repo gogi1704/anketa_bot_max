@@ -228,20 +228,20 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
 
         dialog = await db.get_dialog(user_id) or "User: Привет"
 
-        raw = await open_ai_main.get_gpt_answer(
-            system_prompt=BASE_SYSTEM_PROMPT,
-            user_prompt=BASE_USER_PROMPT.format(dialog=dialog)
-        )
-
-        answer = parse_base_answer(raw)
-
-        await db.append_answer(user_id, "Assistant", answer)
+        # raw = await open_ai_main.get_gpt_answer(
+        #     system_prompt=BASE_SYSTEM_PROMPT,
+        #     user_prompt=BASE_USER_PROMPT.format(dialog=dialog)
+        # )
+        #
+        # answer = parse_base_answer(raw)
+        #
+        await db.append_answer(user_id, "Assistant", resources.text_hi_celick)
 
         await replace_wait_with_text(
             event.bot,
             chat_id,
             wait_msg,
-            answer
+            resources.text_hi_celick
         )
 
     elif data == "tests_main_menu_connect_result_number":

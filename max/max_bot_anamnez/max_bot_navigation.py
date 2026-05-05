@@ -996,14 +996,14 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
 
         keyboard_builder.row(
             CallbackButton(
-                text="Хочу сдать анализы",
+                text="✅ Добавить к осмотру",
                 payload="dopDop_yes"
             )
         )
 
         keyboard_builder.row(
             CallbackButton(
-                text="Спасибо, но нет",
+                text="⏳ Пока без анализов",
                 payload="dopDop_no"
             ))
 

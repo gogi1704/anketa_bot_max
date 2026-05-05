@@ -68,3 +68,11 @@ async def handle_send_post_without_bt(event: MessageCreated):
         chat_id=chat_id,
         text= "Пришлите пост и он будет с одной кнопкой! (Главное меню)",
     )
+
+async def get_price(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+    await event.bot.send_message(
+        chat_id=chat_id,
+        text=resources.text_fake_price,
+        attachments= [tests_keyboards.kb_price()]
+    )
