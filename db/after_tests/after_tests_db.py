@@ -653,6 +653,17 @@ async def get_test_decode(med_id: int) -> Optional[str]:
 
     return row[0]
 
+async def save_decode(med_id: int, decode: str) -> None:
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("""
+            INSERT INTO tests_and_results (med_id, decode)
+            VALUES (?, ?)
+            ON CONFLICT(med_id) DO UPDATE SET
+                decode = excluded.decode
+        """, (med_id, decode))
+
+        await db.commit()
+
 async def get_deviations(med_id: int) -> Optional[str]:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(

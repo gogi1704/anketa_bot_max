@@ -122,7 +122,8 @@ async def process_pending_kind(bot:Bot, kind: str):
 
                 text_to_manager = f"(pending)Пользователь получил результаты в автоматическом режиме.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
                 await bot.send_message(
-                    chat_id=telegram_id,
+                    chat_id=chat_id,
+                    user_id= telegram_id,
                     attachments= kb_to_doc_chat(),
                     text=f"Вот результаты ваших анализов:\n{result}.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs"
 

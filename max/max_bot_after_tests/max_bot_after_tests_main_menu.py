@@ -805,8 +805,33 @@ async def handle_after_good_tests_yes_no(event: MessageCallback):
     elif data == "after_good_tests_no":
         await after_tests_main_menu(event=event)
 
+async def check_user_decode(event, med_id, user_id, doc_urls):
+    decode = await db.get_test_decode(med_id)
+    if decode is None:
+        return None
 
+    anketa_file_path = await create_anketa_txt(user_id)
+    attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+    if attachments:
+        attachments.append(kb_to_doc_chat())
+    else:
+        attachments = [kb_to_doc_chat()]
 
+    if decode == "need_consult":
+        await event.bot.send_message(
+            user_id=user_id,
+            attachments=attachments,
+            text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+        )
+
+    elif decode == "complete":
+        await event.bot.send_message(
+            user_id=user_id,
+            attachments=attachments,
+            text=f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+        )
+    await delete_file(anketa_file_path)
+    return "complete"
 
 async def send_manager_get_decode(event, med_id, user_id, sex, age):
     chat_id, user_id = event.get_ids()
@@ -815,34 +840,42 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
         doc_url = await db.get_test_results(int(med_id))
         doc_urls = split_urls_from_cell(doc_url)
         text_to_manager = "Неопознанная ошибка"
+        is_has_decode = await check_user_decode(event, med_id, user_id, doc_urls)
+        if is_has_decode:
+            return
+
         if doc_url:
+            anketa_file_path = await create_anketa_txt(user_id)
+            attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+            if attachments:
+                attachments.append(kb_to_doc_chat())
+            else:
+                attachments = [kb_to_doc_chat()]
             check_result , problems = await check_tests_pdf.check_list_result(links= doc_urls, bot= event.bot, sex = sex, age = age)
             if check_result == "complete":
+                await db.save_decode(med_id, "complete")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    attachments= [kb_to_doc_chat()],
-                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs или нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    attachments= attachments,
+                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
+
             elif check_result == "need_consult":
+                await db.save_decode(med_id, "need_consult")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 anketa_file_path = await create_anketa_txt(user_id)
-
-                attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-                if attachments:
-                    attachments.append(kb_to_doc_chat())
-                else:
-                    attachments = [kb_to_doc_chat()]
 
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments= attachments,
-                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs или нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
-        await send_to_chat(event= event,
-                           user_id= user_id,
-                           message_text= text_to_manager)
+
+        # await send_to_chat(event= event,
+        #                    user_id= user_id,
+        #                    message_text= text_to_manager)
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
         await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
@@ -855,33 +888,42 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
         doc_url = await db.get_test_results(int(med_id))
         doc_urls = split_urls_from_cell(doc_url)
         text_to_manager = "Неопознанная ошибка"
+        is_has_decode = await check_user_decode(event, med_id, user_id, doc_urls)
+        if is_has_decode:
+            return
+
         if doc_url:
+            anketa_file_path = await create_anketa_txt(user_id)
+            attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+            if attachments:
+                attachments.append(kb_to_doc_chat())
+            else:
+                attachments = [kb_to_doc_chat()]
             check_result , problems = await check_tests_pdf.check_list_result(links= doc_urls, bot= event.bot, sex = sex , age = age)
+
             if check_result == "complete":
+                await db.save_decode(med_id, "need_consult")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
                 await event.bot.send_message(
                     user_id= user_id,
-                    attachments=[kb_to_doc_chat()],
-                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs или нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    attachments=attachments,
+                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
+
             elif check_result == "need_consult":
+                await db.save_decode(med_id, "need_consult")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
-                anketa_file_path = await create_anketa_txt(user_id)
-                attachments = [InputMedia(path= anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-                if attachments:
-                    attachments.append(kb_to_doc_chat())
-                else:
-                    attachments = [kb_to_doc_chat()]
+
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments=attachments ,
-                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке :https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs или нажав на кнопку под этим сообщением.\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
+                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
-
-        await send_to_chat(event=event,
-                           user_id=user_id,
-                           message_text=text_to_manager)
+        #
+        # await send_to_chat(event=event,
+        #                    user_id=user_id,
+        #                    message_text=text_to_manager)
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
         await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
