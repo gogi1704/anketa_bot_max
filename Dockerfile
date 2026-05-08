@@ -14,6 +14,9 @@ RUN pip install -r requirements.txt
 # Указываем команду запуска бота
 CMD ["python", "-m", "max.max_bot_main"]
 
+COPY . .
+
+EXPOSE 8080
 # запускаем так
 #docker run -d \
 #--name anketa_container \

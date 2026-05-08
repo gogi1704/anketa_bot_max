@@ -233,22 +233,40 @@ async def main():
     # 3. чистим старые webhook (важно)
     await bot.delete_webhook()
 
-    # 4. запускаем HTTP сервер (он должен быть уже готов принимать запросы)
-    task = asyncio.create_task(
-        dp.handle_webhook(
-            bot=bot,
-            host="0.0.0.0",
-            port=8080,
-            path="/webhook"
-        )
-    )
-
-    # 5. подписка на webhook в MAX
     await bot.subscribe_webhook(
-        url="https://cheloveckmed.ru/webhook"
+        url="https://cheloveckmed.ru/webhook",
+        secret="SUPER_SECRET_123"
     )
 
-    await task
+    await dp.handle_webhook(
+        bot=bot,
+        host="0.0.0.0",
+        port=8080,
+        path="/webhook"
+    )
+
+
+
+#LONG_POLLING for Tests
+# async def main():
+#     await anamnez_db.init_db()
+#     await after_tests_db.init_db()
+#
+#     asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
+#     asyncio.create_task(anamnez_db.periodic_sync())
+#     asyncio.create_task(scheduler(bot))
+#
+#     # прогрев GPT
+#     await get_gpt_answer("test", "test", bot=bot)
+#
+#     print("MAX бот запущен...")
+#
+#     try:
+#         await bot.set_my_commands(BotCommand(name= "start", description= "Старт"))
+#         await bot.get_updates(marker=0)
+#         await dp.start_polling(bot)
+#     except Exception as e:
+#         logging.exception("Ошибка polling: %s", e)
 
 
 if __name__ == "__main__":
