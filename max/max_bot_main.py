@@ -234,7 +234,7 @@ async def main():
     await bot.delete_webhook()
 
     await bot.subscribe_webhook(
-        url="https://cheloveckmed.ru/webhook",
+        url="https://cheloveckmed.ru/bot/webhook",
         secret="SUPER_SECRET_123"
     )
 
