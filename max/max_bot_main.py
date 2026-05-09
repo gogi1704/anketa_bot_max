@@ -17,6 +17,12 @@ from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
+import threading
+import uvicorn
+from api.api_server import app
+
+def run_api():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 load_dotenv()
 TOKEN = os.environ.get("MAX_TOKEN")
@@ -212,61 +218,63 @@ async def text_handler(event: MessageCreated):
 
     await handle_text_message_anamnez(event, context_manager.get(chat_id, user_id))
 
-
-async def main():
-    # 1. инициализация БД и задач
-    await anamnez_db.init_db()
-    await after_tests_db.init_db()
-
-    asyncio.create_task(after_tests_db.periodic_sync(interval=4000))
-    asyncio.create_task(anamnez_db.periodic_sync())
-    asyncio.create_task(scheduler(bot))
-    asyncio.create_task(osmotr_notification_scheduler(bot))
-
-    await get_gpt_answer("test", "test", bot=bot)
-
-    print("MAX бот webhook стартует...")
-
-    # 2. команды
-    await bot.set_my_commands(BotCommand(name="start", description="Старт"))
-
-    # 3. чистим старые webhook (важно)
-    await bot.delete_webhook()
-
-    await bot.subscribe_webhook(
-        url="https://cheloveckmed.ru/bot/webhook",
-        secret="SUPER_SECRET_123"
-    )
-
-    await dp.handle_webhook(
-        bot=bot,
-        host="0.0.0.0",
-        port=8080,
-        path="/webhook"
-    )
-
-
-
-#LONG_POLLING for Tests
+#
 # async def main():
+#     # 1. инициализация БД и задач
 #     await anamnez_db.init_db()
 #     await after_tests_db.init_db()
 #
-#     asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
+#     asyncio.create_task(after_tests_db.periodic_sync(interval=4000))
 #     asyncio.create_task(anamnez_db.periodic_sync())
 #     asyncio.create_task(scheduler(bot))
+#     asyncio.create_task(osmotr_notification_scheduler(bot))
 #
-#     # прогрев GPT
 #     await get_gpt_answer("test", "test", bot=bot)
 #
-#     print("MAX бот запущен...")
+#     print("MAX бот webhook стартует...")
 #
-#     try:
-#         await bot.set_my_commands(BotCommand(name= "start", description= "Старт"))
-#         await bot.get_updates(marker=0)
-#         await dp.start_polling(bot)
-#     except Exception as e:
-#         logging.exception("Ошибка polling: %s", e)
+#     # 2. команды
+#     await bot.set_my_commands(BotCommand(name="start", description="Старт"))
+#     threading.Thread(target=run_api, daemon=True).start()
+#
+#     # 3. чистим старые webhook (важно)
+#     await bot.delete_webhook()
+#
+#     await bot.subscribe_webhook(
+#         url="https://cheloveckmed.ru/bot/webhook",
+#         secret="SUPER_SECRET_123"
+#     )
+#
+#     await dp.handle_webhook(
+#         bot=bot,
+#         host="0.0.0.0",
+#         port=8080,
+#         path="/webhook"
+#     )
+
+
+
+# LONG_POLLING for Tests
+async def main():
+    await anamnez_db.init_db()
+    await after_tests_db.init_db()
+
+    asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
+    asyncio.create_task(anamnez_db.periodic_sync())
+    asyncio.create_task(scheduler(bot))
+
+    # прогрев GPT
+    await get_gpt_answer("test", "test", bot=bot)
+
+    print("MAX бот запущен...")
+
+    try:
+        await bot.set_my_commands(BotCommand(name= "start", description= "Старт"))
+        await bot.get_updates(marker=0)
+        threading.Thread(target=run_api, daemon=True).start()
+        await dp.start_polling(bot)
+    except Exception as e:
+        logging.exception("Ошибка polling: %s", e)
 
 
 if __name__ == "__main__":

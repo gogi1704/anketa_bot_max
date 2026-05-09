@@ -873,9 +873,9 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
                 )
                 await delete_file(anketa_file_path)
 
-        # await send_to_chat(event= event,
-        #                    user_id= user_id,
-        #                    message_text= text_to_manager)
+        await send_to_chat(event= event,
+                           user_id= user_id,
+                           message_text= text_to_manager)
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
         await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
@@ -920,10 +920,10 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
                     text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
-        #
-        # await send_to_chat(event=event,
-        #                    user_id=user_id,
-        #                    message_text=text_to_manager)
+
+        await send_to_chat(event=event,
+                           user_id=user_id,
+                           message_text=text_to_manager)
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
         await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
