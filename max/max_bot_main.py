@@ -19,10 +19,9 @@ from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
 import threading
 import uvicorn
-from api.api_server import app
 
-def run_api():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# def run_api():
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 load_dotenv()
 TOKEN = os.environ.get("MAX_TOKEN")
@@ -235,7 +234,7 @@ async def main():
 
     # 2. команды
     await bot.set_my_commands(BotCommand(name="start", description="Старт"))
-    threading.Thread(target=run_api, daemon=True).start()
+    # threading.Thread(target=run_api, daemon=True).start()
 
     # 3. чистим старые webhook (важно)
     await bot.delete_webhook()
