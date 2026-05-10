@@ -247,15 +247,15 @@ async def main():
     await bot.delete_webhook()
 
     await bot.subscribe_webhook(
-        url="https://cheloveckmed.ru/bot",
-        secret="SUPER_SECRET_123"
+        url="https://cheloveckmed.ru/bot/webhook",
+        secret= "bot12345",
     )
 
     await dp.handle_webhook(
         bot=bot,
         host="0.0.0.0",
         port=8000,
-        path="/webhook"
+        secret="bot12345"
     )
 
 
