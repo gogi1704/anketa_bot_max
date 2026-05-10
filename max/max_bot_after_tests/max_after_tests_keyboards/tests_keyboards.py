@@ -12,6 +12,7 @@ def kb_tests_main_menu():
     builder.row(CallbackButton(text="📊 Расшифровка показателей", payload="tests_main_menu_get_decode"))
     builder.row(CallbackButton(text="🩺 Консультация по результатам анализов", payload="tests_main_menu_consult_med"))
     builder.row(CallbackButton(text="🤖 Поддержка Челика", payload="tests_main_menu_consult_neuro"))
+    builder.row(CallbackButton(text="💰 Платные услуги", payload="pay_price"))
     builder.row(CallbackButton(text="Ваш врач", payload="doctor_info"))
     builder.row(LinkButton(text="Самый полезный канал в Max",
                            url=f"https://max.ru/join/e1EbeWGW5wqMzQem_0ADl_1-S3MsUKwj-Dx5AbkZ0Do"))
@@ -93,4 +94,16 @@ def kb_price():
     builder.row(CallbackButton(text="Месячная подписка", payload="price_month"))
     builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
 
+    return builder.as_markup()
+
+def kb_pay_price():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text= "Разовая консультация",payload= "go_to_pay"))
+    builder.row(CallbackButton(text="Отмена", payload="go_to_main_menu"))
+    return builder.as_markup()
+
+def kb_yookassa(url:str):
+    builder = InlineKeyboardBuilder()
+    builder.row(LinkButton(text="Оплатить",  url= url))
+    builder.row(CallbackButton(text="Отмена", payload="go_to_main_menu"))
     return builder.as_markup()

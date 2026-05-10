@@ -16,7 +16,7 @@ CMD ["python", "-m", "max.max_bot_main"]
 
 COPY . .
 
-EXPOSE 8080
+EXPOSE 8000
 # запускаем так
 #docker run -d \
 #--name anketa_container \

@@ -5,6 +5,7 @@ from db.db_utils import update_db
 from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex, handle_get_doctor_info
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from max.max_bot_chat import max_bot_cha_manager_after_tests
+from max.payments.payments_funs import handle_pay_button_one_consult, handle_pay_price_button
 from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_tests_main_menu, handle_start_check_up, \
@@ -13,7 +14,7 @@ from maxapi import Dispatcher
 from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
-    get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt, get_price
+    get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt, get_price, make_pay_50
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
@@ -108,8 +109,11 @@ async def callback_router(event: MessageCallback):
         await after_tests_main_menu(event)
         return
 
-    # if payload.startswith("pay"):
-    #     await handle_pay(event)
+    if payload.startswith("go_to_pay"):
+         await handle_pay_button_one_consult(event)
+
+    if payload.startswith("pay_price"):
+         await handle_pay_price_button(event)
 
     if payload.startswith("doctor_info"):
         await handle_get_doctor_info(event)
@@ -160,8 +164,12 @@ async def update_db_handler(event: MessageCreated):
 
 
 @dp.message_created(Command("price"))
-async def update_db_handler(event: MessageCreated):
+async def get_price_handler(event: MessageCreated):
     await get_price(event)
+
+@dp.message_created(Command("make_pay_50"))
+async def make_pay(event: MessageCreated):
+    await make_pay_50(event)
 
 
 @dp.message_created(Command("clear_and_restart"))
@@ -217,7 +225,7 @@ async def text_handler(event: MessageCreated):
 
     await handle_text_message_anamnez(event, context_manager.get(chat_id, user_id))
 
-#
+
 async def main():
     # 1. инициализация БД и задач
     await anamnez_db.init_db()
@@ -234,13 +242,12 @@ async def main():
 
     # 2. команды
     await bot.set_my_commands(BotCommand(name="start", description="Старт"))
-    # threading.Thread(target=run_api, daemon=True).start()
 
     # 3. чистим старые webhook (важно)
     await bot.delete_webhook()
 
     await bot.subscribe_webhook(
-        url="https://cheloveckmed.ru/bot/webhook",
+        url="https://cheloveckmed.ru/bot",
         secret="SUPER_SECRET_123"
     )
 
@@ -268,9 +275,9 @@ async def main():
 #     print("MAX бот запущен...")
 #
 #     try:
+#         await bot.delete_webhook()
 #         await bot.set_my_commands(BotCommand(name= "start", description= "Старт"))
 #         await bot.get_updates(marker=0)
-#         threading.Thread(target=run_api, daemon=True).start()
 #         await dp.start_polling(bot)
 #     except Exception as e:
 #         logging.exception("Ошибка polling: %s", e)

@@ -11,3 +11,5 @@ pymupdf
 requests
 fastapi
 uvicorn
+httpx
+certifi

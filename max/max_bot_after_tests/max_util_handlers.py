@@ -1,9 +1,11 @@
 from maxapi.types import MessageCreated
 
 import resources
+from api.api_funs import create_yookassa_payment
 from db.after_tests import after_tests_db as db
 from db.anamnez import anamnez_db as anamnez_db
 from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
+from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_yookassa
 
 
 async def get_statistic_by_inn(event: MessageCreated):
@@ -76,3 +78,13 @@ async def get_price(event: MessageCreated):
         text=resources.text_fake_price,
         attachments= [tests_keyboards.kb_price()]
     )
+
+async def make_pay_50(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+    payment = await create_yookassa_payment(amount= 50, user_id=user_id, user_email= "test@gmail.com",description= f"Оплата за консультацию({user_id})")
+    confirmation_url = payment["confirmation_url"]
+
+    await event.bot.send_message(chat_id = chat_id,
+                                 user_id=user_id,
+                                 text= "Ссылка для оплаты сформирована.Нажмите на кнопку ниже для оплаты.\n\n\nЕсли ссылка не открывается, проверьте отключен ли у вас VPN (ВПН), и попробуйте нажать на кнопку снова.",
+                                 attachments= [kb_yookassa(url= confirmation_url)])
