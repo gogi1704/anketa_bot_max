@@ -105,5 +105,5 @@ def kb_pay_price():
 def kb_yookassa(url:str):
     builder = InlineKeyboardBuilder()
     builder.row(LinkButton(text="Оплатить",  url= url))
-    builder.row(CallbackButton(text="Отмена", payload="go_to_main_menu"))
+    builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
     return builder.as_markup()

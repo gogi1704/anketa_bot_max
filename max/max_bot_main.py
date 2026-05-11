@@ -1,6 +1,8 @@
 import os
 import logging
 from dotenv import load_dotenv
+from oauthlib.uri_validate import host
+
 from db.db_utils import update_db
 from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex, handle_get_doctor_info
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
@@ -255,7 +257,8 @@ async def main():
         bot=bot,
         host="0.0.0.0",
         port=8000,
-        secret="bot12345"
+        secret="bot12345",
+        path="/webhook"
     )
 
 
