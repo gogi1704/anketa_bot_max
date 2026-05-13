@@ -1,8 +1,3 @@
-import os
-import logging
-from dotenv import load_dotenv
-from oauthlib.uri_validate import host
-
 from db.db_utils import update_db
 from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex, handle_get_doctor_info
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
@@ -12,7 +7,6 @@ from utils.after_tests_utils import scheduler
 from utils.util_fins import context_manager
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_tests_main_menu, handle_start_check_up, \
     handle_decode_yes_no, handle_after_good_tests_yes_no, after_tests_main_menu, handle_empty_decode
-from maxapi import Dispatcher
 from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
@@ -20,20 +14,11 @@ from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
-import threading
-import uvicorn
-
-# def run_api():
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-load_dotenv()
-TOKEN = os.environ.get("MAX_TOKEN")
+from max.bot_instace import bot, dp
+import logging
+from api.api_server import router as payment_router
 
 logging.basicConfig(level=logging.INFO)
-
-bot = Bot(TOKEN)
-dp = Dispatcher()
-
 
 @dp.message_callback()
 async def callback_router(event: MessageCallback):
@@ -252,7 +237,8 @@ async def main():
         url="https://cheloveckmed.ru/bot/webhook",
         secret= "bot12345",
     )
-
+    dp.webhook_post("/internal/payment-success")(payment_router.routes[0].endpoint)
+    dp.webhook_post("/internal/payment-canceled")(payment_router.routes[1].endpoint)
     await dp.handle_webhook(
         bot=bot,
         host="0.0.0.0",
