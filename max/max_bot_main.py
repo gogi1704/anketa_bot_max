@@ -244,7 +244,7 @@ async def main():
         host="0.0.0.0",
         port=8000,
         secret="bot12345",
-        path="/webhook"
+        path="/bot/webhook"
     )
 
 
