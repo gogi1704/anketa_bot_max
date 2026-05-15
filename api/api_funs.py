@@ -31,7 +31,7 @@ async def pay_completed(user_id: int):
                            text= f"{resources.TEXT_PAY_COMPLETE}\n\n\n#id_{user_id}",
                            attachments=[kb_go_to_main_menu()]
                            )
-    await send_to_chat(user_id= user_id, message_text= f"Оплата прошла успешно!.\n\n\n#Диалог_{user_id}")
+    await send_to_chat(user_id= user_id, message_text= f"Оплата прошла успешно!\n\n\n#Диалог_{user_id}")
 
 
 

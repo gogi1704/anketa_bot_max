@@ -16,7 +16,8 @@ from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
 from max.bot_instace import bot, dp
 import logging
-from api.api_server import router as payment_router
+
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -214,39 +215,59 @@ async def text_handler(event: MessageCreated):
 
 
 async def main():
-    # 1. инициализация БД и задач
+    print("MAX бот webhook стартует...")
+
+    # 1. Инициализация БД
     await anamnez_db.init_db()
     await after_tests_db.init_db()
 
-    asyncio.create_task(after_tests_db.periodic_sync(interval=4000))
-    asyncio.create_task(anamnez_db.periodic_sync())
-    asyncio.create_task(scheduler(bot))
-    asyncio.create_task(osmotr_notification_scheduler(bot))
+    # 2. Фоновые задачи
+    tasks = [
+        asyncio.create_task(after_tests_db.periodic_sync(interval=4000)),
+        asyncio.create_task(anamnez_db.periodic_sync()),
+        asyncio.create_task(scheduler(bot)),
+        asyncio.create_task(osmotr_notification_scheduler(bot)),
+    ]
 
+    # 3. Тестовый вызов (опционально)
     await get_gpt_answer("test", "test", bot=bot)
 
-    print("MAX бот webhook стартует...")
+    # 4. Команды бота
+    await bot.set_my_commands(
+        BotCommand(name="start", description="Старт")
+    )
 
-    # 2. команды
-    await bot.set_my_commands(BotCommand(name="start", description="Старт"))
-
-    # 3. чистим старые webhook (важно)
+    # 5. Webhook cleanup
     await bot.delete_webhook()
 
+    # 6. Подписка на webhook
     await bot.subscribe_webhook(
         url="https://cheloveckmed.ru/bot/webhook",
-        secret= "bot12345",
-    )
-    dp.webhook_post("/internal/payment-success")(payment_router.routes[0].endpoint)
-    dp.webhook_post("/internal/payment-canceled")(payment_router.routes[1].endpoint)
-    await dp.handle_webhook(
-        bot=bot,
-        host="0.0.0.0",
-        port=8000,
         secret="bot12345",
-        path="/bot/webhook"
     )
 
+
+    try:
+        # 7. Запуск webhook сервера (БЛОКИРУЮЩИЙ)
+        await dp.handle_webhook(
+            bot=bot,
+            host="0.0.0.0",
+            port=8000,
+            secret="bot12345",
+            path="/bot/webhook"
+        )
+
+    finally:
+        # 8. Graceful shutdown
+
+        # останавливаем фоновые задачи
+        for task in tasks:
+            task.cancel()
+
+        # закрываем bot aiohttp session (ВАЖНО)
+        await bot.close_session()
+
+        print("Бот корректно остановлен")
 
 
 # LONG_POLLING for Tests

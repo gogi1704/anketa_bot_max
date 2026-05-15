@@ -75,19 +75,32 @@ async def call_openai_with_auto_key(system_prompt, user_prompt, client, bot, mod
 #     print(answer)
 #     return answer
 
-async def get_gpt_answer(system_prompt, user_prompt, bot = None, model = model_gpt_5_mini):
+async def get_gpt_answer(system_prompt, user_prompt, bot=None, model=model_gpt_5_mini):
     keys = await db.get_active_keys()
     answer = "api_error_Empty_keys"
-    for key in keys:
-        update_openai_api_key(new_key= key)
-        load_dotenv(override=True)
-        client = AsyncOpenAI(api_key=key)
-        answer = await call_openai_with_auto_key(system_prompt=system_prompt, user_prompt=user_prompt, client=client,  bot=bot, model=model)
 
-        if answer == "error":
-            await db.deactivate_key(key)
-        else:
-            return answer
+    for key in keys:
+        update_openai_api_key(new_key=key)
+        load_dotenv(override=True)
+
+        client = AsyncOpenAI(api_key=key)
+
+        try:
+            answer = await call_openai_with_auto_key(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                client=client,
+                bot=bot,
+                model=model
+            )
+
+            if answer == "error":
+                await db.deactivate_key(key)
+            else:
+                return answer
+
+        finally:
+            await client.close()
 
     return answer
 
