@@ -155,7 +155,6 @@ async def process_pending_kind(bot:Bot, kind: str):
                 await asyncio.sleep(0.4)
 
             except Exception as e:
-                print(f"[ERR] sending decode med_id={med_id} chat_id={chat_id}: {e}")
                 continue
     print(f"Отправлено пендингов: {sent}")
 

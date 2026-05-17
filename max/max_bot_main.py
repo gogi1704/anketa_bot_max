@@ -1,4 +1,5 @@
 from db.db_utils import update_db
+from g_drive_funs import payment_notifications_worker
 from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex, handle_get_doctor_info
 from max.max_bot_chat.max_bot_chat_manager import handle_reply_button_pressed, handle_manager_reply
 from max.max_bot_chat import max_bot_cha_manager_after_tests
@@ -227,6 +228,7 @@ async def main():
         asyncio.create_task(anamnez_db.periodic_sync()),
         asyncio.create_task(scheduler(bot)),
         asyncio.create_task(osmotr_notification_scheduler(bot)),
+        asyncio.create_task(payment_notifications_worker())
     ]
 
     # 3. Тестовый вызов (опционально)
@@ -278,6 +280,7 @@ async def main():
 #     asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
 #     asyncio.create_task(anamnez_db.periodic_sync())
 #     asyncio.create_task(scheduler(bot))
+#     asyncio.create_task(payment_notifications_worker())
 #
 #     # прогрев GPT
 #     await get_gpt_answer("test", "test", bot=bot)

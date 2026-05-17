@@ -25,22 +25,36 @@ async def create_yookassa_payment(amount: int,
 
         return data
 
+async def complete_send_notify(payment_id: str):
 
-async def pay_completed(user_id: int):
+    async with httpx.AsyncClient(verify= False) as client:
+
+        response = await client.post(
+            "https://cheloveckmed.ru/payments/remove-payment",
+            json={
+                "payment_id": payment_id
+            }
+        )
+
+        return response
+
+
+
+async def pay_completed(user_id: int, payment_id):
     await bot.send_message(user_id= user_id,
-                           text= f"{resources.TEXT_PAY_COMPLETE}\n\n\n#id_{user_id}",
+                           text= f"{resources.TEXT_PAY_COMPLETE}\n\n\n#id_{user_id}\nid платежа: {payment_id}",
                            attachments=[kb_go_to_main_menu()]
                            )
-    await send_to_chat(user_id= user_id, message_text= f"Оплата прошла успешно!\n\n\n#Диалог_{user_id}")
+    await send_to_chat(user_id= user_id, message_text= f"Оплата прошла успешно!\n\n\n#Диалог_{user_id}\nid платежа: {payment_id}")
 
 
 
-async def pay_canceled(user_id: int):
+async def pay_canceled(user_id: int,payment_id):
     await bot.send_message(user_id= user_id,
                            text= resources.TEXT_PAY_CANCELED,
                            attachments=[kb_go_to_main_menu()]
                            )
-    await send_to_chat(user_id= user_id, message_text= f"Оплата была отменена или вышел срок действия ссылки.\n\n\n#Диалог_{user_id}")
+    await send_to_chat(user_id= user_id, message_text= f"Оплата была отменена или вышел срок действия ссылки.\n\n\n#Диалог_{user_id}\nid платежа: {payment_id}")
 
 
 async def send_to_chat(user_id: int, message_text: str):

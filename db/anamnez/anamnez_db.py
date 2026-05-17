@@ -101,6 +101,19 @@ async def init_db():
                 )
             """)
 
+            await db.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                payment_id TEXT UNIQUE,
+                user_id INTEGER,
+                amount REAL,
+                status TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                paid_at TIMESTAMP,
+                notify_send BOOLEAN DEFAULT 0
+            )
+            """)
+
             await db.commit()
         await sync_from_google_sheets()
 
@@ -124,8 +137,23 @@ def get_sheet():
         "user_answer_state": sheet.worksheet("user_answer_state"),
         "dialog_states": sheet.worksheet("dialog_states"),
         "anketa_state": sheet.worksheet("anketa_state"),
-        "api_keys": sheet.worksheet("api_keys")
+        "api_keys": sheet.worksheet("api_keys"),
+        "payments": sheet.worksheet("payments"),
     }
+
+async def sync_and_get_from_google_sheets_payments():
+    sheets = get_sheet()
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("DELETE FROM payments")
+        rows = sheets["payments"].get_all_values()[1:]
+        for r in rows:
+            id, payment_id, user_id, amount, status, created_at, paid_at, notify_send = r
+            await db.execute(
+                "INSERT INTO payments (id, payment_id, user_id, amount, status, created_at, paid_at, notify_send ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (int(id), payment_id, user_id, status, amount, created_at, paid_at, notify_send )
+            )
+        await db.commit()
+    return sheets
 
 # ==== Загрузка данных из Google Sheets в SQLite ====
 async def sync_from_google_sheets():
@@ -141,6 +169,7 @@ async def sync_from_google_sheets():
         await db.execute("DELETE FROM dialog_states")
         await db.execute("DELETE FROM anketa_state")
         await db.execute("DELETE FROM api_keys")
+        await db.execute("DELETE FROM payments")
         # patient_dialogs
         rows = sheets["patient_dialogs"].get_all_values()[1:]
         for r in rows:
@@ -148,6 +177,14 @@ async def sync_from_google_sheets():
             await db.execute(
                 "INSERT INTO patient_dialogs (telegram_id, dialog_text, updated_at) VALUES (?, ?, ?)",
                 (int(telegram_id), dialog_text, updated_at)
+            )
+
+        rows = sheets["payments"].get_all_values()[1:]
+        for r in rows:
+            id, payment_id, user_id, amount, status, created_at, paid_at, notify_send = r
+            await db.execute(
+                "INSERT INTO payments (id, payment_id, user_id, amount, status, created_at, paid_at, notify_send ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (int(id), payment_id, user_id, status, amount, created_at, paid_at, notify_send )
             )
 
         # user_data
@@ -231,6 +268,28 @@ async def sync_from_google_sheets():
 
         await db.commit()
         print("[✅] Данные из Google Sheets ANAMNEZ_DB загружены в SQLite")
+
+async def sync_to_google_sheets_payments():
+    sheets = get_sheet()
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute("SELECT id, payment_id, user_id, status, amount,  created_at, paid_at, notify_send FROM payments") as cur:
+            rows = await cur.fetchall()
+
+        sheets["payments"].clear()
+        sheets["payments"].update("A1", [["id", "payment_id", "user_id", "status", "amount" "created_at", "paid_at", "notify_send"]] + rows)
+    print("[✅] Данные ANAMNEZ_DB выгружены в Google Sheets")
+
+async def set_payment_notified(payment_id: str):
+
+    async with aiosqlite.connect(db_path) as db:
+
+        await db.execute("""
+            UPDATE payments
+            SET notify_send = 1
+            WHERE payment_id = ?
+        """, (payment_id,))
+
+        await db.commit()
 
 # ==== Выгрузка данных из SQLite в Google Sheets ====
 async def sync_to_google_sheets():

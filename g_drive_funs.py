@@ -6,6 +6,10 @@ from typing import List, Union, Optional
 from urllib.parse import urlparse, parse_qs, unquote
 import requests
 
+from api.api_funs import pay_completed, pay_canceled, complete_send_notify
+from db.anamnez import anamnez_db
+from db.anamnez.anamnez_db import sync_and_get_from_google_sheets_payments
+
 
 class GoogleDriveDownloadError(Exception):
     pass
@@ -346,37 +350,43 @@ async def download_and_return_paths(
 
 
 
-# async def main():
-#     links = [
-#         "https://drive.google.com/file/d/1f6slrePq-X0I9XiIb3XsdvvFzO2F7Zfw/view?usp=drivesdk",
-#         "https://drive.google.com/file/d/1NamYBKSnyXqRzbc2NC5IE8-reSx5co7C/view?usp=drivesdk",
-#         "https://drive.google.com/file/d/1t5bBP1MfcOkyFgGwcm0zPDlnBCoZ9WOV/view?usp=drivesdk"
-#     ]
-#
-#     paths = []
-#
-#     try:
-#         paths = await download_google_drive_files(
-#             links,
-#             output_dir="temp_pdfs",
-#             timeout=60,
-#         )
-#
-#         print("Скачанные файлы:")
-#         for p in paths:
-#             print(p)
-#
-#         # тут твоя обработка pdf
-#         # for p in paths:
-#         #     text = pdf_to_text(p)
-#         #     print(text[:500])
-#
-#     finally:
-#         deleted = await delete_files_by_paths(paths)
-#         print("Удалены файлы:")
-#         for p in deleted:
-#             print(p)
-#
-#
-# if __name__ == "__main__":
-#     asyncio.run(main())
+async def payment_notifications_worker():
+    while True:
+        print("NOTIFY")
+        sheets = await sync_and_get_from_google_sheets_payments()
+        payments_sheet = sheets["payments"]
+        rows = payments_sheet.get_all_records()
+
+        try:
+            for index, row in enumerate(rows, start=2):
+                status = str(row.get("status", "")).strip().lower()
+                notify_send = str(row.get("notify_send", "")).strip().lower()
+                user_id = row.get("user_id")
+                payment_id = str(row.get("payment_id")).strip().lower()
+
+                # уже обработано
+                if notify_send in ["1", "true"]:
+                    continue
+
+                # успешная оплата
+                if status == "succeeded":
+
+                    await pay_completed(int(user_id), payment_id)
+                    await complete_send_notify(payment_id)
+                    await anamnez_db.set_payment_notified(payment_id)
+
+                    print(f"SUCCESS notify sent: {user_id}")
+
+                # отмененная оплата
+                elif status == "canceled":
+
+                    await pay_canceled(int(user_id), payment_id)
+                    await complete_send_notify(payment_id)
+                    await anamnez_db.set_payment_notified(payment_id)
+
+                    print(f"CANCELED notify sent: {user_id}")
+
+        except Exception as e:
+            print(f"payment worker error: {e}")
+
+        await asyncio.sleep(120)
