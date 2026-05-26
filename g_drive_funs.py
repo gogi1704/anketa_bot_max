@@ -352,41 +352,49 @@ async def download_and_return_paths(
 
 async def payment_notifications_worker():
     while True:
-        print("NOTIFY")
-        sheets = await sync_and_get_from_google_sheets_payments()
-        payments_sheet = sheets["payments"]
-        rows = payments_sheet.get_all_records()
-
         try:
+            print("NOTIFY")
+
+            sheets = await sync_and_get_from_google_sheets_payments()
+            payments_sheet = sheets["payments"]
+            rows = payments_sheet.get_all_records()
+
             for index, row in enumerate(rows, start=2):
-                status = str(row.get("status", "")).strip().lower()
-                notify_send = str(row.get("notify_send", "")).strip().lower()
-                user_id = row.get("user_id")
-                payment_id = str(row.get("payment_id")).strip().lower()
+                payment_id = None
 
-                # уже обработано
-                if notify_send in ["1", "true"]:
-                    continue
+                try:
+                    status = str(row.get("status", "")).strip().lower()
+                    notify_send = str(row.get("notify_send", "")).strip().lower()
+                    user_id = row.get("user_id")
+                    payment_id = str(row.get("payment_id", "")).strip().lower()
 
-                # успешная оплата
-                if status == "succeeded":
+                    # Уже обработано
+                    if notify_send in ["1", "true"]:
+                        continue
 
-                    await pay_completed(int(user_id), payment_id)
-                    await complete_send_notify(payment_id)
-                    await anamnez_db.set_payment_notified(payment_id)
+                    # Успешная оплата
+                    if status == "succeeded":
+                        await pay_completed(int(user_id), payment_id)
+                        await complete_send_notify(payment_id)
+                        await anamnez_db.set_payment_notified(payment_id)
 
-                    print(f"SUCCESS notify sent: {user_id}")
+                        print(f"SUCCESS notify sent: {user_id}")
 
-                # отмененная оплата
-                elif status == "canceled":
+                    # Отмененная оплата
+                    elif status == "canceled":
+                        await pay_canceled(int(user_id), payment_id)
+                        await complete_send_notify(payment_id)
+                        await anamnez_db.set_payment_notified(payment_id)
 
-                    await pay_canceled(int(user_id), payment_id)
-                    await complete_send_notify(payment_id)
-                    await anamnez_db.set_payment_notified(payment_id)
+                        print(f"CANCELED notify sent: {user_id}")
 
-                    print(f"CANCELED notify sent: {user_id}")
+                except Exception as e:
+                    print(
+                        f"Payment processing error. "
+                        f"Row={index}, payment_id={payment_id}, error={e}"
+                    )
 
         except Exception as e:
-            print(f"payment worker error: {e}")
+            print(f"Payment worker error: {e}")
 
         await asyncio.sleep(120)
