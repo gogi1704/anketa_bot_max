@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from maxapi.types import CallbackButton, LinkButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 

@@ -6,17 +6,20 @@ from maxapi.enums.upload_type import UploadType
 from maxapi.types import MessageCallback, MessageCreated, InputMedia
 
 from ai_agents import open_ai_main
-from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYSTEM_PROMPT, BOSS_COLLECT_SYSTEM_PROMPT
+from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYSTEM_PROMPT, BOSS_COLLECT_SYSTEM_PROMPT, \
+    system_prompt_small_anketa, user_prompt_small_anketa
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import \
-    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_statistic_inn_close, kb_to_doc_chat
+    kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_statistic_inn_close, kb_to_doc_chat, \
+    kb_go_to_main_menu
 from max.max_bot_anamnez.max_bot_navigation import choose_tests
 
 import resources
 from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
 from db.after_tests import after_tests_db as db
+from db.anamnez import anamnez_db
 from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat
 from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji, parse_base_answer, \
-    replace_wait_with_text, pars_answer_and_data
+    replace_wait_with_text, pars_answer_and_data, parse_small_anketa
 from doc_funs import send_results_doc_and_text, split_urls_from_cell, create_anketa_txt, delete_file
 from ai_agents import check_tests_pdf
 
@@ -59,6 +62,16 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
 
 
     if data == "tests_main_menu_make_tests":
+        anketa = await anamnez_db.get_anketa(user_id)
+        if anketa is None:
+            await db.set_neuro_dialog_states(user_id, state= resources.dialog_states["small_anketa"])
+            await event.bot.send_message(
+                chat_id=chat_id,
+                text=resources.TEXT_FIRST_QUE_SMALL_ANKETA,
+                attachments= [kb_go_to_main_menu()]
+            )
+            return
+
         await event.bot.send_message(
             chat_id=chat_id,
             text=resources.TEXT_MAKE_CHECK_UP,
@@ -128,7 +141,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
             if doc_url:
                 await send_manager_get_decode(event, med_id, user_id, sex, age)
                 await write_and_sleep(event,chat_id,3)
-                await after_tests_main_menu(event)
+                # await after_tests_main_menu(event)
                 return
 
             await event.bot.send_message(
@@ -149,7 +162,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
 
 
 
-            await after_tests_main_menu(event)
+            # await after_tests_main_menu(event)
 
         else:
 
@@ -179,7 +192,7 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
                                       chat_id=chat_id,
                                       sleep_time=3)
 
-                await after_tests_main_menu(event)
+                # await after_tests_main_menu(event)
 
             else:
 
@@ -686,6 +699,53 @@ async def handle_boss_collect(event: MessageCreated, dialog, name, age):
     await replace_wait_with_text(event.bot, chat_id, wait_msg, result)
     return
 
+async def handle_small_anketa(event:MessageCreated, dialog):
+    def add(role, msg):
+        return dialog + f"\n{role}: {msg}"
+
+    message = event.message
+    chat_id, user_id = event.get_ids()
+    text = message.body.text.strip()
+    anketa = await anamnez_db.get_anketa(user_id)
+
+    dialog = add("User", text)
+    await db.append_answer(user_id, "User", text)
+    wait_msg = await send_wait_emoji(event.bot, chat_id)
+
+    raw = await open_ai_main.get_gpt_answer(
+        system_prompt=system_prompt_small_anketa,
+        user_prompt=user_prompt_small_anketa.format(dialog=dialog, anketa = anketa)
+    )
+
+    answer, age, height, weight = parse_small_anketa(raw)
+
+    if answer == "complete":
+        await db.delete_neuro_dialog_states(user_id)
+        await anamnez_db.add_or_update_anketa(user_id = user_id,
+                                              age= age,
+                                              weight= weight,
+                                              height= height,)
+
+        anketa = await anamnez_db.get_anketa(user_id)
+        print(anketa)
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text= "Супер.Теперь вам доступны все возможности бота!"
+        )
+        await asyncio.sleep(1)
+        await after_tests_main_menu(event)
+
+        return
+
+
+    dialog = add("Assistant", answer)
+    await db.append_answer(user_id, "Assistant", answer)
+    await replace_wait_with_text(event.bot, chat_id, wait_msg, answer)
+    return
+
+
+
 
 
 async def handle_start_check_up(event:MessageCallback, context_data: MemoryContext):
@@ -835,6 +895,15 @@ async def check_user_decode(event, med_id, user_id, doc_urls):
 
 async def send_manager_get_decode(event, med_id, user_id, sex, age):
     chat_id, user_id = event.get_ids()
+    anketa = await anamnez_db.get_anketa(user_id)
+    if anketa is None:
+        await db.set_neuro_dialog_states(user_id, state=resources.dialog_states["small_anketa"])
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.TEXT_FIRST_QUE_SMALL_ANKETA,
+            attachments= [kb_go_to_main_menu()]
+        )
+        return
     try:
         await event.bot.send_message(user_id=user_id, text= "Пожалуйста, подождите несколько минут. Обычно анализ занимает до 3 минут.Спасибо за понимание.")
         doc_url = await db.get_test_results(int(med_id))
@@ -879,10 +948,19 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
         await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
-        await after_tests_main_menu(event)
+    await after_tests_main_menu(event)
 
 async def send_manager_get_consult(event, med_id, user_id, sex, age):
     chat_id, user_id = event.get_ids()
+    anketa = await anamnez_db.get_anketa(user_id)
+    if anketa is None:
+        await db.set_neuro_dialog_states(user_id, state=resources.dialog_states["small_anketa"])
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.TEXT_FIRST_QUE_SMALL_ANKETA,
+            attachments=[kb_go_to_main_menu()]
+        )
+        return
     try:
         await event.bot.send_message(user_id=user_id, text= "Пожалуйста, подождите несколько минут. Обычно анализ занимает до 3 минут.Спасибо за понимание.")
         doc_url = await db.get_test_results(int(med_id))
@@ -927,7 +1005,8 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
     except():
         await event.bot.send_message("Сервер не отвечает. Попробуйте повторить запрос через минуту!")
         await write_and_sleep(event = event, chat_id= chat_id, sleep_time= 2)
-        await after_tests_main_menu(event)
+
+    await after_tests_main_menu(event)
 
 
 

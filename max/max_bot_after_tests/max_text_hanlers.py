@@ -4,7 +4,8 @@ from maxapi.types import MessageCreated
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu, \
     kb_send_post_without_bt, kb_send_post_with_bt
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_get_med_id, handle_get_med_id_decode, \
-    handle_get_med_id_consult, handle_base_speak, handle_manager_collect, handle_boss_collect, handle_connect_med_id
+    handle_get_med_id_consult, handle_base_speak, handle_manager_collect, handle_boss_collect, handle_connect_med_id, \
+    handle_small_anketa
 from max.max_bot_chat import max_bot_cha_manager_after_tests
 from db.after_tests import after_tests_db as db
 from db.anamnez import anamnez_db
@@ -49,6 +50,10 @@ async def handle_text_message_after_tests(event:MessageCreated):
 
     if anketa:
         age = anketa["age"] if anketa["age"] else 0
+
+    if state == dialog_states["small_anketa"]:
+        await handle_small_anketa(event, dialog)
+        return
 
     if state == dialog_states["send_post_with_bt"]:
         user_ids = await anamnez_db.get_all_user_ids()

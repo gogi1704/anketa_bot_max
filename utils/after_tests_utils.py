@@ -50,6 +50,31 @@ def pars_answer_and_data(model_response: str) :
     except json.JSONDecodeError as e:
         raise ValueError(f"Ответ модели не является валидным JSON: {e}. \n\n Ответ модели: {model_response}")
 
+def parse_small_anketa(model_response: str) :
+    """
+    Извлекает значение поля 'answer' из JSON-ответа модели.
+    Возвращает строку answer или выбрасывает исключение при ошибке.
+    """
+    try:
+        data = json.loads(model_response)
+        answer = data.get("answer")
+        if answer == "complete":
+            age = data.get("age")
+            height = data.get("height")
+            weight = data.get("weight")
+        else:
+            age = None
+            height = None
+            weight = None
+
+        if answer is None:
+            raise ValueError("Поле 'answer' отсутствует в ответе модели")
+        return answer, age, height, weight
+
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Ответ модели не является валидным JSON: {e}. \n\n Ответ модели: {model_response}")
+
 async def write_and_sleep(event, chat_id,  sleep_time):
     await event.bot.send_action(
         chat_id=chat_id,

@@ -8,6 +8,7 @@ from maxapi.types import MessageCreated, MessageCallback
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 from max.max_bot_after_tests import max_bot_after_tests_main_menu
+from max.max_bot_anamnez.anamnez_kbs import kb_choose_osmotr_or_no
 from utils import util_fins
 from ai_agents.open_ai_main import get_gpt_answer
 from utils.after_tests_utils import write_and_sleep
@@ -42,35 +43,29 @@ async def bot_started(event: BotStarted):
     if ref_code == "results":
         return ref_code
 
-    await anamnez_db.append_answer(
-        telegram_id=user_id,
-        text=f"Терапевт сказал: {resources.start_text}\n"
-        )
-
-    await anamnez_db.save_user_reply_state(
-        user_id,
-        manager_msg_id=resources.STATES_USERS_FINALS['start']
-        )
-
-        # Отправляем фото с текстом
-
-    # with open(image_path, "rb") as image_file:
-    #     buffer = image_file.read()  # читаем весь файл в память
-    #     media = InputMediaBuffer(buffer=buffer, filename="image_andrey.jpg", type=UploadType.IMAGE)
-    #
-    #     await event.bot.send_message(
-    #         chat_id = chat_id,
-    #         text=resources.start_text,
-    #         attachments=[media]
-    #         )
-
     await event.bot.send_message(
         chat_id=chat_id,
-        text=resources.start_text
+        text=resources.new_start_text,
+        attachments= [kb_choose_osmotr_or_no()]
     )
 
+    # await anamnez_db.append_answer(
+    #     telegram_id=user_id,
+    #     text=f"Терапевт сказал: {resources.start_text}\n"
+    #     )
+    #
+    # await anamnez_db.save_user_reply_state(
+    #     user_id,
+    #     manager_msg_id=resources.STATES_USERS_FINALS['start']
+    #     )
+    #
+    # await event.bot.send_message(
+    #     chat_id=chat_id,
+    #     text=resources.start_text
+    # )
+
         # Переходим к следующему состоянию
-    await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
+    # await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
     return None
 
 
@@ -125,6 +120,32 @@ async def start(event: MessageCreated):
         ),
         attachments=[builder.as_markup()]
     )
+
+async def handle_osmotr_or(event: MessageCallback):
+    chat_id, user_id = event.get_ids()
+    payload = event.callback.payload
+
+    if payload == "osmotr_or_no":
+        await max_bot_after_tests_main_menu.after_tests_main_menu(event)
+
+    elif payload == "osmotr_or_yes" :
+        await anamnez_db.append_answer(
+            telegram_id=user_id,
+            text=f"Терапевт сказал: {resources.start_text}\n"
+            )
+
+        await anamnez_db.save_user_reply_state(
+            user_id,
+            manager_msg_id=resources.STATES_USERS_FINALS['start']
+            )
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.start_text
+        )
+
+        await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
+
 
 async def handle_text_message_anamnez(event: MessageCreated, context_data: MemoryContext):
     text = event.message.body.text

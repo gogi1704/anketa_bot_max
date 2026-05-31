@@ -111,6 +111,9 @@ async def callback_router(event: MessageCallback):
     if payload.startswith("get_your_sex_"):
         await handle_get_your_sex(event)
 
+    if payload.startswith("osmotr_or_"):
+        await handle_osmotr_or(event)
+
 
 # __________________________________________________________________________________________________
 
