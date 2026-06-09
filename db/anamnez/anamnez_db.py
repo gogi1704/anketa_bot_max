@@ -919,6 +919,28 @@ async def get_report_by_inns(inn_list: list[str]) -> str:
 
     return report
 
+#__
+async def get_manager_users_with_dop_tests(manager_name: str):
+
+    async with aiosqlite.connect(db_path) as db:
+
+        db.row_factory = aiosqlite.Row
+
+        async with db.execute(
+            """
+            SELECT *
+            FROM user_data
+            WHERE from_manager = ?
+              AND get_dop_tests IS NOT NULL
+              AND TRIM(get_dop_tests) != ''
+            """,
+            (manager_name,)
+        ) as cursor:
+
+            rows = await cursor.fetchall()
+
+            return [dict(row) for row in rows]
+
 
 from collections import Counter
 def normalize_dt_for_sqlite(value: str | datetime.datetime) -> str:

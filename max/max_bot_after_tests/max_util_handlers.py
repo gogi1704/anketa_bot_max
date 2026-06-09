@@ -88,3 +88,14 @@ async def make_pay_50(event: MessageCreated):
                                  user_id=user_id,
                                  text= "Ссылка для оплаты сформирована.Нажмите на кнопку ниже для оплаты.\n\n\nЕсли ссылка не открывается, проверьте отключен ли у вас VPN (ВПН), и попробуйте нажать на кнопку снова.",
                                  attachments= [kb_yookassa(url= confirmation_url)])
+
+async def get_manager_d(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+
+    lines = await anamnez_db.get_manager_users_with_dop_tests("manager_D")
+    print(lines)
+    await event.bot.send_message(
+        chat_id=chat_id,
+        text= f"Всего у manager_D - {len(lines)} заявок",
+        attachments= [tests_keyboards.kb_price()]
+    )
