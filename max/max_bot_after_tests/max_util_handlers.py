@@ -1,4 +1,8 @@
 from maxapi.types import MessageCreated
+from pathlib import Path
+from maxapi.enums.upload_type import UploadType
+from maxapi.types import InputMediaBuffer
+from maxapi.types.attachments import Attachments
 
 import resources
 from api.api_funs import create_yookassa_payment
@@ -6,7 +10,12 @@ from db.after_tests import after_tests_db as db
 from db.anamnez import anamnez_db as anamnez_db
 from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_yookassa
+from pydantic import TypeAdapter
 
+video_paths = [Path(__file__).parent.parent.parent / "images" / "video_1.mp4",
+               Path(__file__).parent.parent.parent / "images" / "video_2.mp4",
+               Path(__file__).parent.parent.parent / "images" / "video_3.mp4"
+               ]
 
 async def get_statistic_by_inn(event: MessageCreated):
     chat_id, user_id = event.get_ids()
@@ -99,3 +108,47 @@ async def get_manager_d(event: MessageCreated):
         text= f"Всего у manager_D - {len(lines)} заявок",
         attachments= [tests_keyboards.kb_price()]
     )
+
+async def upload_video(event: MessageCreated, video_file_path, video_count):
+    chat_id, user_id = event.get_ids()
+    with open(video_file_path, "rb") as video_file:
+        buffer = video_file.read()  # читаем весь файл в память
+        media = InputMediaBuffer(buffer=buffer, filename= f"video_{video_count}", type=UploadType.VIDEO)
+
+        res = await event.bot.send_message(
+            chat_id = chat_id,
+            text= f"video_{video_count}",
+            attachments=[media]
+            )
+        # print(res)
+
+        att = res.message.body.attachments[0] if res.message.body.attachments else None
+        await anamnez_db.add_upload_token(upload_name= f"video_{video_count}", upload_token= att.model_dump_json())
+
+
+async def upload_videos(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+    video_count = 1
+    for path in video_paths:
+        await upload_video(event, path, video_count)
+        video_count += 1
+
+    # att_json = await anamnez_db.get_upload_token(upload_name= str(video_paths[0]))
+    # attachment_adapter = TypeAdapter(Attachments)
+    # attachment = attachment_adapter.validate_json(
+    #     att_json
+    # )
+    #
+    # await event.bot.send_message(
+    #     chat_id=chat_id,
+    #     text= "Повтор",
+    #     attachments=[attachment]
+    # )
+
+async def get_video_attachments_by_name(video_name):
+    att_json = await anamnez_db.get_upload_token(upload_name= video_name)
+    attachment_adapter = TypeAdapter(Attachments)
+    attachment = attachment_adapter.validate_json(
+        att_json
+    )
+    return attachment

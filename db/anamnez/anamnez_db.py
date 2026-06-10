@@ -6,15 +6,18 @@ from typing import Dict, Any
 import aiosqlite
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from pathlib import Path
 
 db_path='anamnez.db'
-from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 CREDS_PATH = BASE_DIR / "docs" / "anamnez-max-a04dd6899274.json"
 
 async def init_db():
         async with aiosqlite.connect(db_path) as db:
+            await db.execute(
+                "PRAGMA journal_mode=WAL;"
+            )
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS patient_dialogs (
                     telegram_id INTEGER PRIMARY KEY,
@@ -98,6 +101,13 @@ async def init_db():
                 CREATE TABLE IF NOT EXISTS api_keys (
                     key TEXT PRIMARY KEY,
                     is_active BOOLEAN DEFAULT 1
+                )
+            """)
+
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS uploads (
+                    upload_name TEXT PRIMARY KEY,
+                    upload_token TEXT
                 )
             """)
 
@@ -803,6 +813,40 @@ async def delete_user_full(user_id: int):
         await db.commit()
 
     print(f"[🗑 DEBUG] Полностью удалён user_id={user_id}")
+
+#______UPLOADS
+async def add_upload_token(
+    upload_name: str,
+    upload_token: str
+) -> None:
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("""
+            INSERT OR REPLACE INTO uploads (
+                upload_name,
+                upload_token
+            )
+            VALUES (?, ?)
+        """, (upload_name, upload_token))
+
+        await db.commit()
+
+
+async def get_upload_token(
+    upload_name: str
+) -> str | None:
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute("""
+            SELECT upload_token
+            FROM uploads
+            WHERE upload_name = ?
+        """, (upload_name,)) as cursor:
+
+            row = await cursor.fetchone()
+
+            if row is None:
+                return None
+
+            return row[0]
 
 
 #______STATISTIC

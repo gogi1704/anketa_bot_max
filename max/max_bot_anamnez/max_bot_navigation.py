@@ -5,9 +5,12 @@ from maxapi.context import MemoryContext
 from maxapi.enums.sender_action import SenderAction
 from maxapi.types import BotStarted, LinkButton
 from maxapi.types import MessageCreated, MessageCallback
+from maxapi.types.attachments import Attachments
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+from pydantic import TypeAdapter
 
 from max.max_bot_after_tests import max_bot_after_tests_main_menu
+from max.max_bot_after_tests.max_util_handlers import get_video_attachments_by_name
 from max.max_bot_anamnez.anamnez_kbs import kb_choose_osmotr_or_no
 from utils import util_fins
 from ai_agents.open_ai_main import get_gpt_answer
@@ -100,8 +103,16 @@ async def start(event: MessageCreated):
         #         attachments=[media]
         #     )
 
+        video_start = await get_video_attachments_by_name(video_name= "video_1")
         await event.message.answer(
             text=resources.start_text,
+            attachments=[video_start]
+        )
+
+        await write_and_sleep(event, chat_id, 3)
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.start_text_2
         )
 
         await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
@@ -139,9 +150,17 @@ async def handle_osmotr_or(event: MessageCallback):
             manager_msg_id=resources.STATES_USERS_FINALS['start']
             )
 
+        video_start = await get_video_attachments_by_name(video_name="video_1")
         await event.bot.send_message(
             chat_id=chat_id,
-            text=resources.start_text
+            text=resources.start_text,
+            attachments= [video_start]
+        )
+        await write_and_sleep(event, chat_id,3)
+
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=resources.start_text_2
         )
 
         await anamnez_db.set_dialog_state(user_id, resources.dialog_states_dict["get_name"])
@@ -296,6 +315,14 @@ async def new_branch_dialog_fatigue(event: MessageCreated, context_data: MemoryC
         context = await context_data.get_data()
         has_overweight = context.get("has_overweight")
         has_blood_pressure = context.get("has_blood_pressure")
+
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        await event.message.answer(
+            text=resources.recomend_video_text,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
+
         answer_text = f"{resources.text_new_branch_fatigue_complete}"
         if has_overweight:
             answer_text += "\nВ анкете были выявлены признаки избыточного веса. Рекомендуем также добавить чек-ап «Лишний вес»"
@@ -362,6 +389,13 @@ async def new_branch_dialog_overweight(event: MessageCreated,context_data: Memor
     elif agent_answer == "complete":
         context = await context_data.get_data()
         has_blood_pressure = context.get("has_blood_pressure")
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        await event.message.answer(
+            text=resources.recomend_video_text,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
+
         answer_text = f"{resources.text_new_branch_overweight_complete}"
         if has_blood_pressure:
             answer_text += "\nВ анкете было выявлено повышенное давление. Рекомендуем также добавить чек-ап «Липидный обмен»"
@@ -425,6 +459,13 @@ async def new_branch_dialog_blood_pressure(event: MessageCreated, context_data: 
 
     elif agent_answer == "complete":
         context = await context_data.get_data()
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        await event.message.answer(
+            text=resources.recomend_video_text,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
+
         has_overweight = context.get("has_overweight")
         answer_text = f"{resources.text_new_branch_blood_pressure_complete}"
         if has_overweight:
@@ -471,6 +512,14 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
         await event.message.answer(text="Что то не так, попробуйте вести ответ заново через минуту!")
 
     elif agent_answer == "all_right":
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        await event.message.answer(
+            text=resources.recomend_video_text,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
+
+
         await event.message.answer(text=resources.text_new_branch_another_problem_all_right)
         await asyncio.sleep(3)
 
@@ -484,6 +533,13 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
 
     elif agent_answer == "complete":
         user_data = await anamnez_db.get_user(user_id=user_id)
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        await event.message.answer(
+            text=resources.recomend_video_text,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
+
         await event.message.answer(text=resources.text_new_branch_another_problem_complete)
 
         text_to_manager = (
@@ -1026,6 +1082,14 @@ async def handle_dop_analizy(event: MessageCallback,  context_data: MemoryContex
                 text="⏳ Пока без анализов",
                 payload="dopDop_no"
             ))
+
+
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_3")
+        await event.message.answer(
+            text=resources.video_tests_plus,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
 
         await event.bot.send_message(
             chat_id=chat_id,

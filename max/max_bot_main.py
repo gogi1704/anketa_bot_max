@@ -11,7 +11,8 @@ from max.max_bot_after_tests.max_bot_after_tests_main_menu import handle_after_t
 from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
-    get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt, get_price, make_pay_50
+    get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt, get_price, make_pay_50, \
+    get_manager_d, upload_videos
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
@@ -163,6 +164,13 @@ async def get_price_handler(event: MessageCreated):
 async def make_pay(event: MessageCreated):
     await make_pay_50(event)
 
+@dp.message_created(Command("manager_d"))
+async def get_manager_d_handler(event: MessageCreated):
+    await get_manager_d(event)
+
+@dp.message_created(Command("upload_videos"))
+async def upload_videos_command(event: MessageCreated):
+    await upload_videos(event)
 
 @dp.message_created(Command("clear_and_restart"))
 async def clear_handler(event: MessageCreated):

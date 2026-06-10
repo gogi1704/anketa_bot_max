@@ -11,6 +11,7 @@ from ai_agents.prompts import BASE_SYSTEM_PROMPT, BASE_USER_PROMPT, COLLECT_SYST
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import \
     kb_tests_decode_empty, kb_check_up_start, kb_tests_main_menu, kb_statistic_inn_close, kb_to_doc_chat, \
     kb_go_to_main_menu
+from max.max_bot_after_tests.max_util_handlers import get_video_attachments_by_name
 from max.max_bot_anamnez.max_bot_navigation import choose_tests
 
 import resources
@@ -71,6 +72,13 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
                 attachments= [kb_go_to_main_menu()]
             )
             return
+
+        video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        await event.message.answer(
+            text=resources.recomend_video_text,
+            attachments=[video_get_tests]
+        )
+        await write_and_sleep(event,chat_id,sleep_time=4)
 
         await event.bot.send_message(
             chat_id=chat_id,
