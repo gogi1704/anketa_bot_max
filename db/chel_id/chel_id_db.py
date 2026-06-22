@@ -24,7 +24,7 @@ async def init_db():
             )
         """)
 
-    await sync_from_google_sheets_chel_id()
+    # await sync_from_google_sheets_chel_id()
 
 
 
@@ -111,7 +111,7 @@ async def sync_from_google_sheets_chel_id():
         for r in rows:
             chel_id, max_id = r
             await db.execute(
-                "INSERT INTO patient_dialogs (chel_id, max_id) VALUES (?, ?)",
+                "INSERT INTO chel_ids_sheet (chel_id, max_id) VALUES (?, ?)",
                 (chel_id, max_id)
             )
 
@@ -122,7 +122,7 @@ async def sync_from_google_sheets_chel_id():
 async def sync_to_google_sheets_chel_id():
     sheets = get_sheet()
     async with aiosqlite.connect(db_path) as db:
-        async with db.execute("SELECT chel_id, max_id") as cur:
+        async with db.execute("SELECT chel_id, max_id FROM chel_ids_sheet") as cur:
             rows = await cur.fetchall()
 
         sheets["chel_ids_sheet"].clear()
