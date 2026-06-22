@@ -25,7 +25,7 @@ async def init_db():
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 med_id TEXT,
                 user_state TEXT,
-                from_manager TEXT
+                chel_id INTEGER
             )
         """)
 
@@ -142,7 +142,7 @@ async def sync_from_google_sheets():
             if not r or len(r) < 7:
                 continue
 
-            telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager = r[:7]
+            telegram_id, user_name, dialog_text, updated_at, med_id, user_state, chel_id = r[:7]
             tid = _safe_int(telegram_id)
             if tid is None:
                 continue
@@ -150,10 +150,10 @@ async def sync_from_google_sheets():
             await db.execute(
                 """
                 INSERT INTO users_max
-                (telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager)
+                (telegram_id, user_name, dialog_text, updated_at, med_id, user_state, chel_id)
                 VALUES (?,?,?,?,?,?,?)
                 """,
-                (tid, user_name, dialog_text, updated_at, med_id, user_state, from_manager)
+                (tid, user_name, dialog_text, updated_at, med_id, user_state, chel_id)
             )
 
         # ---------------------------
@@ -318,13 +318,13 @@ async def sync_to_google_sheets():
         # users
         # ---------------------------
         async with db.execute(
-            "SELECT telegram_id, user_name, dialog_text, updated_at, med_id, user_state, from_manager FROM users_max"
+            "SELECT telegram_id, user_name, dialog_text, updated_at, med_id, user_state, chel_id FROM users_max"
         ) as cur:
             rows = await cur.fetchall()
         sheets["users_max"].clear()
         sheets["users_max"].update(
             "A1",
-            [["telegram_id", "user_name", "dialog_text", "updated_at", "med_id", "user_state, from_manager"]] + rows
+            [["telegram_id", "user_name", "dialog_text", "updated_at", "med_id", "user_state", "chel_id"]] + rows
         )
 
         # ---------------------------
@@ -506,25 +506,25 @@ async def get_user_state(telegram_id: int) -> str | None:
             row = await cursor.fetchone()
             return row[0] if row else None
 
-async def set_from_manager(telegram_id: int, from_manager: str):
+async def set_chel_id(telegram_id: int, chel_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(
             """
-            INSERT INTO users_max (telegram_id, from_manager)
+            INSERT INTO users_max (telegram_id, chel_id)
             VALUES (?, ?)
             ON CONFLICT(telegram_id)
             DO UPDATE SET
-                from_manager = excluded.from_manager,
+                chel_id = chel_id,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (telegram_id, from_manager)
+            (telegram_id, chel_id)
         )
         await db.commit()
 
 async def get_from_manager(telegram_id: int) -> str | None:
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-            "SELECT from_manager FROM users_max WHERE telegram_id = ?",
+            "SELECT chel_id FROM users_max WHERE telegram_id = ?",
             (telegram_id,)
         ) as cursor:
             row = await cursor.fetchone()
@@ -736,6 +736,15 @@ async def get_decode_only(med_id: int) -> Optional[str]:
         return None
     return row[0]
 
+async def get_users_with_mend_id():
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT telegram_id, med_id
+            FROM users_max
+            WHERE med_id IS NOT NULL
+              AND TRIM(med_id) != ''
+        """)
+        return await cursor.fetchall()
 
 
 

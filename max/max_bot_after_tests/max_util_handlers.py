@@ -54,6 +54,26 @@ async def get_dop_tests_statistic(event: MessageCreated):
             text= result
         )
 
+async def get_dop_tests_all_and_print_to_console(event: MessageCreated):
+    chat_id, _ = event.get_ids()
+    result = await anamnez_db.get_structuring_users_with_dop_tests()
+    print(result)
+
+
+async def dop_with_med_id(event: MessageCreated):
+    chat_id, _ = event.get_ids()
+    dop_users = await anamnez_db.get_users_with_dop_tests()
+    med_id_users = await db.get_users_with_mend_id()
+
+    dop_user_ids = {row[0] for row in dop_users}
+    med_user_ids = {row[0] for row in med_id_users}
+
+    intersection = dop_user_ids & med_user_ids
+
+    print(f"Всего выбрали допы: {len(dop_user_ids)}")
+    print(f"Всего привязали пробирку: {len(med_user_ids)}")
+    print(f"Пересечение тех кто выбрал допы и привязал пробирку: {len(intersection)}")
+
 async def handle_send_post_with_bt (event: MessageCreated):
     chat_id, user_id = event.get_ids()
 
@@ -146,9 +166,11 @@ async def upload_videos(event: MessageCreated):
     # )
 
 async def get_video_attachments_by_name(video_name):
+    attachment = None
     att_json = await anamnez_db.get_upload_token(upload_name= video_name)
     attachment_adapter = TypeAdapter(Attachments)
-    attachment = attachment_adapter.validate_json(
-        att_json
-    )
+    if att_json is not None:
+        attachment = attachment_adapter.validate_json(
+            att_json
+        )
     return attachment

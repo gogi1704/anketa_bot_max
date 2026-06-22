@@ -23,6 +23,7 @@ from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji,
     replace_wait_with_text, pars_answer_and_data, parse_small_anketa
 from doc_funs import send_results_doc_and_text, split_urls_from_cell, create_anketa_txt, delete_file
 from ai_agents import check_tests_pdf
+from db.chel_id import chel_id_db
 
 
 
@@ -31,6 +32,17 @@ async def after_tests_main_menu(event):
     chat_id,user_id = event.get_ids()
     user_state = await db.get_user_state(user_id)
     user_sex = await  db.get_user_sex(user_id)
+    chel_id = await chel_id_db.get_chel_id(user_id)
+
+    if chel_id is None:
+        chel_id = await chel_id_db.get_or_create_and_get_chel_id(user_id)
+        await db.set_chel_id(telegram_id= user_id , chel_id= chel_id)
+        text = f"Вашей анкете присвоен номер : {1000+chel_id}"
+        await event.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+        )
+
 
     if user_sex is None or user_sex == "":
         await event.bot.send_message(
@@ -47,7 +59,7 @@ async def after_tests_main_menu(event):
 
     await event.bot.send_message(
         chat_id=chat_id,
-        text=resources.TEXT_TESTS_MAIN_MENU,
+        text=f"{resources.TEXT_TESTS_MAIN_MENU}\n\nНомер анкеты: {1000+chel_id}",
         attachments=[tests_keyboards.kb_tests_main_menu()]
     )
 
@@ -889,14 +901,14 @@ async def check_user_decode(event, med_id, user_id, doc_urls):
         await event.bot.send_message(
             user_id=user_id,
             attachments=attachments,
-            text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+            text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение и анкету нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
         )
 
     elif decode == "complete":
         await event.bot.send_message(
             user_id=user_id,
             attachments=attachments,
-            text=f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+            text=f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение и анкету нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
         )
     await delete_file(anketa_file_path)
     return "complete"
@@ -946,7 +958,7 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments= attachments,
-                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение и анкету нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
 
@@ -1003,7 +1015,7 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments=attachments ,
-                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую отправить это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
+                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение и анкету нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
                 )
                 await delete_file(anketa_file_path)
 

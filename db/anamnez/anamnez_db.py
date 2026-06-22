@@ -1187,3 +1187,29 @@ async def get_dop_tests_stats() -> str:
     result = "\n".join(f"{name} - {count}" for name, count in sorted_items)
 
     return result
+
+
+
+async def get_users_with_dop_tests():
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute("""
+            SELECT user_id, get_dop_tests
+            FROM user_data
+            WHERE get_dop_tests IS NOT NULL
+              AND TRIM(get_dop_tests) != ''
+        """) as cursor:
+            return await cursor.fetchall()
+
+async def get_structuring_users_with_dop_tests():
+    rows = await get_users_with_dop_tests()
+    return [
+        {
+            "user_id": user_id,
+            "get_dop_tests": [
+                item.strip()
+                for item in dop_tests.split(",")
+                if item.strip()
+            ]
+        }
+        for user_id, dop_tests in rows
+    ]

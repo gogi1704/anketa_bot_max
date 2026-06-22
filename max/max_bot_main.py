@@ -1,3 +1,5 @@
+import asyncio
+
 from db.db_utils import update_db
 from g_drive_funs import payment_notifications_worker
 from max.max_bot_after_tests.max_after_tests_callback_handllers import handle_get_your_sex, handle_get_doctor_info
@@ -12,12 +14,13 @@ from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
     get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt, get_price, make_pay_50, \
-    get_manager_d, upload_videos
+    get_manager_d, upload_videos, get_dop_tests_all_and_print_to_console, dop_with_med_id
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
 from max.bot_instace import bot, dp
 import logging
+from db.chel_id import chel_id_db
 
 
 
@@ -188,6 +191,14 @@ async def get_stat_inn_by_date(event: MessageCreated):
 async def get_dop_tests_stat(event: MessageCreated):
     await get_dop_tests_statistic(event)
 
+@dp.message_created(Command("get_dop_tests_all"))
+async def get_dop_tests_stat_all_and_print(event: MessageCreated):
+    await get_dop_tests_all_and_print_to_console(event)
+
+@dp.message_created(Command("dop_with_med_id"))
+async def get_dop_tests_stat_dop_with_med_id(event: MessageCreated):
+    await dop_with_med_id(event)
+
 @dp.message_created(Command("send_post_with_bt"))
 async def send_post_with_bt(event: MessageCreated):
     await handle_send_post_with_bt(event)
@@ -232,11 +243,13 @@ async def main():
     # 1. Инициализация БД
     await anamnez_db.init_db()
     await after_tests_db.init_db()
+    await chel_id_db.init_db()
 
     # 2. Фоновые задачи
     tasks = [
         asyncio.create_task(after_tests_db.periodic_sync(interval=4000)),
         asyncio.create_task(anamnez_db.periodic_sync()),
+        asyncio.create_task(chel_id_db.periodic_sync()),
         asyncio.create_task(scheduler(bot)),
         asyncio.create_task(osmotr_notification_scheduler(bot)),
         asyncio.create_task(payment_notifications_worker())
@@ -287,7 +300,9 @@ async def main():
 # async def main():
 #     await anamnez_db.init_db()
 #     await after_tests_db.init_db()
+#     await chel_id_db.init_db()
 #
+#     asyncio.create_task(chel_id_db.periodic_sync())
 #     asyncio.create_task(after_tests_db.periodic_sync(interval= 4000))
 #     asyncio.create_task(anamnez_db.periodic_sync())
 #     asyncio.create_task(scheduler(bot))
