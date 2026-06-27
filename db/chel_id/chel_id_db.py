@@ -24,7 +24,7 @@ async def init_db():
             )
         """)
 
-    # await sync_from_google_sheets_chel_id()
+    await sync_from_google_sheets_chel_id()
 
 
 

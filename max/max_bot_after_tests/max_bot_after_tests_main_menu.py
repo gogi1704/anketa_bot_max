@@ -18,10 +18,11 @@ import resources
 from max.max_bot_after_tests.max_after_tests_keyboards import tests_keyboards
 from db.after_tests import after_tests_db as db
 from db.anamnez import anamnez_db
-from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat
+from max.max_bot_chat.max_bot_cha_manager_after_tests import send_to_chat, send_to_news_chat
 from utils.after_tests_utils import write_and_sleep, parse_int, send_wait_emoji, parse_base_answer, \
     replace_wait_with_text, pars_answer_and_data, parse_small_anketa
-from doc_funs import send_results_doc_and_text, split_urls_from_cell, create_anketa_txt, delete_file
+from doc_funs import send_results_doc_and_text, split_urls_from_cell, create_anketa_txt, delete_file, build_anketa_text, \
+    get_anketa_text
 from ai_agents import check_tests_pdf
 from db.chel_id import chel_id_db
 
@@ -886,31 +887,47 @@ async def handle_after_good_tests_yes_no(event: MessageCallback):
         await after_tests_main_menu(event=event)
 
 async def check_user_decode(event, med_id, user_id, doc_urls):
+    chat_id, _ = event.get_ids()
     decode = await db.get_test_decode(med_id)
+    attachments = [kb_to_doc_chat()]
     if decode is None:
         return None
 
-    anketa_file_path = await create_anketa_txt(user_id)
-    attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-    if attachments:
-        attachments.append(kb_to_doc_chat())
-    else:
-        attachments = [kb_to_doc_chat()]
+
+    anketa_text = await get_anketa_text(user_id)
+    # anketa_file_path = await create_anketa_txt(user_id)
+    # attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+    # if attachments:
+    #     attachments.append(kb_to_doc_chat())
+    # else:
+    #     attachments = [kb_to_doc_chat()]
 
     if decode == "need_consult":
+        video = await get_video_attachments_by_name(video_name= "video_4")
+        await event.message.answer(
+            attachments=[video]
+        )
+        await write_and_sleep(event = event, chat_id = chat_id, sleep_time=5)
+
         await event.bot.send_message(
             user_id=user_id,
             attachments=attachments,
-            text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение и анкету нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+            text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n{anketa_text}\n\nСсылки на ваши результаты: {doc_urls}"
         )
 
     elif decode == "complete":
+        video = await get_video_attachments_by_name(video_name="video_4")
+        await event.message.answer(
+            attachments=[video]
+        )
+        await write_and_sleep(event=event, chat_id=chat_id, sleep_time=5)
+
         await event.bot.send_message(
             user_id=user_id,
             attachments=attachments,
-            text=f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение и анкету нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+            text=f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n{anketa_text}\n\nСсылки на ваши результаты: {doc_urls}"
         )
-    await delete_file(anketa_file_path)
+    # await delete_file(anketa_file_path)
     return "complete"
 
 async def send_manager_get_decode(event, med_id, user_id, sex, age):
@@ -934,35 +951,52 @@ async def send_manager_get_decode(event, med_id, user_id, sex, age):
             return
 
         if doc_url:
-            anketa_file_path = await create_anketa_txt(user_id)
-            attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-            if attachments:
-                attachments.append(kb_to_doc_chat())
-            else:
-                attachments = [kb_to_doc_chat()]
+            attachments = [kb_to_doc_chat()]
+            anketa_text = await get_anketa_text(user_id)
+
+            # anketa_file_path = await create_anketa_txt(user_id)
+            # attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+            # if attachments:
+            #     attachments.append(kb_to_doc_chat())
+            # else:
+            #     attachments = [kb_to_doc_chat()]
+
             check_result , problems = await check_tests_pdf.check_list_result(links= doc_urls, bot= event.bot, sex = sex, age = age)
             if check_result == "complete":
                 await db.save_decode(med_id, "complete")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+
+                video = await get_video_attachments_by_name(video_name="video_4")
+                await event.message.answer(
+                    attachments=[video]
+                )
+                await write_and_sleep(event=event, chat_id=chat_id, sleep_time=5)
+
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments= attachments,
-                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n{anketa_text}\n\nСсылки на ваши результаты: {doc_urls}"
                 )
 
             elif check_result == "need_consult":
                 await db.save_decode(med_id, "need_consult")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
-                anketa_file_path = await create_anketa_txt(user_id)
+                # anketa_file_path = await create_anketa_txt(user_id)
+
+                video = await get_video_attachments_by_name(video_name="video_4")
+                await event.message.answer(
+                    attachments=[video]
+                )
+                await write_and_sleep(event=event, chat_id=chat_id, sleep_time=5)
 
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments= attachments,
-                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение и анкету нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    text= f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n{anketa_text}\n\nСсылки на ваши результаты: {doc_urls}"
                 )
-                await delete_file(anketa_file_path)
+                # await delete_file(anketa_file_path)
 
-        await send_to_chat(event= event,
+        await send_to_news_chat(event= event,
                            user_id= user_id,
                            message_text= text_to_manager)
     except():
@@ -991,35 +1025,51 @@ async def send_manager_get_consult(event, med_id, user_id, sex, age):
             return
 
         if doc_url:
-            anketa_file_path = await create_anketa_txt(user_id)
-            attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
-            if attachments:
-                attachments.append(kb_to_doc_chat())
-            else:
-                attachments = [kb_to_doc_chat()]
+            attachments = [kb_to_doc_chat()]
+            anketa_text = await get_anketa_text(user_id)
+
+            # anketa_file_path = await create_anketa_txt(user_id)
+            # attachments = [InputMedia(path=anketa_file_path, type=UploadType.FILE)] if anketa_file_path else None
+            # if attachments:
+            #     attachments.append(kb_to_doc_chat())
+            # else:
+            #     attachments = [kb_to_doc_chat()]
             check_result , problems = await check_tests_pdf.check_list_result(links= doc_urls, bot= event.bot, sex = sex , age = age)
 
             if check_result == "complete":
                 await db.save_decode(med_id, "need_consult")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Его результаты в пределах нормы.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
+
+                video = await get_video_attachments_by_name(video_name="video_4")
+                await event.message.answer(
+                    attachments=[video]
+                )
+                await write_and_sleep(event=event, chat_id=chat_id, sleep_time=5)
+
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments=attachments,
-                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nСсылки на ваши результаты: {doc_urls}"
+                    text= f"Ваши результаты находятся в пределах нормы.\n\n Если вам нужна персональная консультация по результатам анализов, то отправьте это сообщение нашему специалисту в личный чат MAX (НЕ ЗВОНИТЬ).\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n{anketa_text}\n\nСсылки на ваши результаты: {doc_urls}"
                 )
 
             elif check_result == "need_consult":
                 await db.save_decode(med_id, "need_consult")
                 text_to_manager = f"Пользователь получил расшифровку в автоматическом режиме.Есть отклонения.\nПорекомендовал связаться с Татьяной Витальевной в макс. Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{user_id})."
 
+                video = await get_video_attachments_by_name(video_name="video_4")
+                await event.message.answer(
+                    attachments=[video]
+                )
+                await write_and_sleep(event=event, chat_id=chat_id, sleep_time=5)
+
                 await event.bot.send_message(
                     user_id= user_id,
                     attachments=attachments ,
-                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение и анкету нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n\n\nВот ссылки на ваши документы: {doc_urls}"
+                    text=f"На первый взгляд, некоторые результаты имеют отклонение от нормы. \nЯ рекомендую переслать это сообщение нашему врачу в личный чат MAX (НЕ ЗВОНИТЬ) для более детального рассмотрения.\n📩Связаться в МАХ со специалистом можно ссылке: https://max.ru/u/f9LHodD0cOIWhj3BuueIOPTrf4xQibmR61Y3vcgmZ18rqaDnoC6nZt6YBNs \nили нажав на кнопку под этим сообщением.\n\n{anketa_text}\n\nВот ссылки на ваши документы: {doc_urls}"
                 )
-                await delete_file(anketa_file_path)
+                # await delete_file(anketa_file_path)
 
-        await send_to_chat(event=event,
+        await send_to_news_chat(event=event,
                            user_id=user_id,
                            message_text=text_to_manager)
     except():

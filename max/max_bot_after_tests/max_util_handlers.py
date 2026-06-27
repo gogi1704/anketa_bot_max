@@ -14,7 +14,8 @@ from pydantic import TypeAdapter
 
 video_paths = [Path(__file__).parent.parent.parent / "images" / "video_1.mp4",
                Path(__file__).parent.parent.parent / "images" / "video_2.mp4",
-               Path(__file__).parent.parent.parent / "images" / "video_3.mp4"
+               Path(__file__).parent.parent.parent / "images" / "video_3.mp4",
+               Path(__file__).parent.parent.parent / "images" / "video_4.mp4"
                ]
 
 async def get_statistic_by_inn(event: MessageCreated):

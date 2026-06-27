@@ -16,6 +16,17 @@ async def send_to_chat(event, user_id: int, message_text: str):
         user_id=user_id
     )
 
+async def send_to_news_chat(event, user_id: int, message_text: str):
+    sent = await event.bot.send_message(
+        chat_id=resources.NEWS_CHAT_ID,
+        text=message_text
+    )
+
+    # await save_message_link(
+    #     group_msg_id= sent.message.body.seq,
+    #     user_id=user_id
+    # )
+
 async def handle_reply_button_pressed(event:MessageCallback):
     chat_id, user_id = event.get_ids()
     payload = event.callback.payload

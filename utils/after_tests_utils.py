@@ -12,7 +12,7 @@ from ai_agents import check_tests_pdf
 from db.after_tests import after_tests_db
 from doc_funs import split_urls_from_cell, create_anketa_txt, delete_file
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu, kb_to_doc_chat
-from max.max_bot_chat.max_bot_chat_manager import send_to_chat
+from max.max_bot_chat.max_bot_chat_manager import send_to_chat, send_to_news_chat
 from db.anamnez import anamnez_db
 
 
@@ -143,7 +143,7 @@ async def process_pending_kind(bot:Bot, kind: str):
                 if not result or not str(result).strip():
                     continue
 
-                text_to_manager = "Неопознанная ошибка"
+                # text_to_manager = "Неопознанная ошибка"
 
                 text_to_manager = f"(pending)Пользователь получил результаты в автоматическом режиме.Вот номер его пробирки: {med_id}\nВот ссылки на анализы :\n{doc_urls} \n\n(#Диалог_{telegram_id})."
                 await bot.send_message(
@@ -175,7 +175,7 @@ async def process_pending_kind(bot:Bot, kind: str):
 
 
                 await after_tests_db.delete_pending_by_id(row_id)
-                await send_to_chat(bot= bot, user_id= telegram_id, message_text= text_to_manager )
+                await send_to_news_chat(bot= bot, user_id= telegram_id, message_text= text_to_manager )
                 sent += 1
                 await asyncio.sleep(0.4)
 

@@ -230,7 +230,7 @@ async def send_osmotr_tomorrow_notifications(bot:Bot):
             print(f"Неизвестная ошибка отправки user_id={user_id}: {e}")
             continue
 
-    await max_bot_chat_manager.send_to_chat(bot, user_id = 206156549, message_text= f"Напоминания отправлены пользователям.\nВсего найдено пользователей: {len(users)}\nУспешно отправлено: {users_count}")
+    await max_bot_chat_manager.send_to_news_chat(bot, user_id = 206156549, message_text= f"Напоминания отправлены пользователям.\nВсего найдено пользователей: {len(users)}\nУспешно отправлено: {users_count}")
 
 async def osmotr_notification_scheduler(bot):
     while True:

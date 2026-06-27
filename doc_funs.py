@@ -141,8 +141,7 @@ async def send_results_doc_and_text(event,
 def build_anketa_text(anketa: dict, user_sex, user_name) -> str:
     if anketa:
         return f"""
-АНКЕТА ПОЛЬЗОВАТЕЛЯ
-
+Доп. сведения для консультации:
 Имя: {user_name}
 Пол: {user_sex}
 Возраст: {anketa.get("age")}
@@ -153,6 +152,20 @@ def build_anketa_text(anketa: dict, user_sex, user_name) -> str:
         return f"""
         АНКЕТА не найдена
         """
+
+async def get_anketa_text(user_id: int):
+    anketa = await get_anketa(user_id)
+    user_data = await get_user(user_id)
+    user_name = user_data["name"] if user_data else "Не заполнено"
+    user_sex = await get_user_sex(user_id)
+    if not anketa:
+        return "Анкета не найдена"
+    if user_sex is None or user_sex == "":
+        user_sex = "Нет данных"
+    anketa_text = build_anketa_text(anketa, user_sex ,user_name)
+
+    return anketa_text
+
 
 
 async def create_anketa_txt(user_id: int) -> str | None:

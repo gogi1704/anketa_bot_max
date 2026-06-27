@@ -75,6 +75,18 @@ async def call_openai_with_auto_key(system_prompt, user_prompt, client, bot, mod
 #     print(answer)
 #     return answer
 
+async def get_gpt_answer_test(system_prompt, user_prompt):
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    completion = await client.chat.completions.create(
+        model=model_gpt_5_mini,
+        messages=messages,
+    )
+    print(completion.choices[0].message.content)
+    return completion.choices[0].message.content
+
 async def get_gpt_answer(system_prompt, user_prompt, bot=None, model=model_gpt_5_mini):
     keys = await db.get_active_keys()
     answer = "api_error_Empty_keys"

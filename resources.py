@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
 GROUP_CHAT_ID= -71540273136133
+NEWS_CHAT_ID = -76259897983493
 politika_url = "https://docs.google.com/document/d/1fdp8o-97d2-n9YcBZuFFeX8s_8veytQpeMI_Nbex6GQ/edit?usp=sharing"
 
 text_about_doctor = """
