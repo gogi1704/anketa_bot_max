@@ -83,6 +83,20 @@ async def delete_user_id(max_id: int) -> bool:
 
         return cursor.rowcount > 0
 
+async def get_max_ids() -> set[int]:
+    """
+    Возвращает множество всех max_id из chel_ids_sheet.
+    """
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute("""
+            SELECT max_id
+            FROM chel_ids_sheet
+        """)
+
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+    return {row[0] for row in rows}
 
 
 

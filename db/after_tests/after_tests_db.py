@@ -746,7 +746,46 @@ async def get_users_with_mend_id():
         """)
         return await cursor.fetchall()
 
+async def get_users_with_med_id(user_ids: set[int]) -> dict[int, str]:
+    """
+    Возвращает словарь:
+    {
+        telegram_id: med_id
+    }
+    только для пользователей из user_ids с непустым med_id.
+    """
 
+    if not user_ids:
+        return {}
+
+    BATCH_SIZE = 500
+    result = {}
+
+    ids = list(user_ids)
+
+    async with aiosqlite.connect(db_path) as db:
+        for i in range(0, len(ids), BATCH_SIZE):
+            batch = ids[i:i + BATCH_SIZE]
+
+            placeholders = ",".join("?" * len(batch))
+
+            cursor = await db.execute(f"""
+                SELECT telegram_id, med_id
+                FROM users_max
+                WHERE telegram_id IN ({placeholders})
+                  AND med_id IS NOT NULL
+                  AND TRIM(med_id) <> ''
+            """, batch)
+
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+            result.update({
+                telegram_id: med_id
+                for telegram_id, med_id in rows
+            })
+
+    return result
 
 
 

@@ -1188,6 +1188,49 @@ async def get_dop_tests_stats() -> str:
 
     return result
 
+async def get_users_with_dop_tests_from_chel_id(max_ids: set[int]) -> dict[int, str]:
+    """
+    Возвращает словарь:
+    {
+        user_id: get_dop_tests
+    }
+    только для пользователей из max_ids с непустым get_dop_tests.
+    """
+
+    if not max_ids:
+        return {}
+
+    BATCH_SIZE = 500
+    result = {}
+
+    ids = list(max_ids)
+
+    async with aiosqlite.connect(db_path) as db:
+        for i in range(0, len(ids), BATCH_SIZE):
+            batch = ids[i:i + BATCH_SIZE]
+
+            placeholders = ",".join("?" for _ in batch)
+
+            query = f"""
+                SELECT user_id, get_dop_tests
+                FROM user_data
+                WHERE
+                    user_id IN ({placeholders})
+                    AND get_dop_tests IS NOT NULL
+                    AND TRIM(get_dop_tests) <> ''
+            """
+
+            cursor = await db.execute(query, batch)
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+            result.update({
+                user_id: tests
+                for user_id, tests in rows
+            })
+
+    return result
+
 
 
 async def get_users_with_dop_tests():

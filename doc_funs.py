@@ -7,8 +7,9 @@ from docx import Document
 from maxapi.enums.upload_type import UploadType
 from maxapi.types import InputMedia
 
-from db.after_tests.after_tests_db import get_user_sex
-from db.anamnez.anamnez_db import get_anketa, get_user
+from db.after_tests.after_tests_db import get_user_sex, get_users_with_med_id
+from db.anamnez.anamnez_db import get_anketa, get_user, get_users_with_dop_tests_from_chel_id
+from db.chel_id.chel_id_db import get_max_ids
 
 GOOGLE_DOC_ID_RE = re.compile(r"/document/d/([a-zA-Z0-9_-]+)")
 
@@ -200,3 +201,35 @@ async def delete_file(file_path: str) -> bool:
         print(f"Ошибка при удалении файла {file_path}: {e}")
         return False
 
+async def build_users_analytics_need_and_real():
+    """
+    Возвращает список:
+    [
+        {
+            "id": ...,
+            "med_id": ...,
+            "get_dop_tests": ...
+        }
+    ]
+    """
+
+    max_ids = await get_max_ids()
+    dop_tests = await get_users_with_dop_tests_from_chel_id(max_ids)
+    med_ids = await get_users_with_med_id(set(dop_tests.keys()))
+
+    result = []
+
+    for user_id in max_ids:
+        if user_id not in dop_tests:
+            continue
+
+        if user_id not in med_ids:
+            continue
+
+        result.append({
+            "id": user_id,
+            "med_id": med_ids[user_id],
+            "get_dop_tests": dop_tests[user_id]
+        })
+
+    return max_ids, dop_tests, med_ids, result
