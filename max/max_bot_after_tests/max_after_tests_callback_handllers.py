@@ -4,6 +4,7 @@ from pathlib import Path
 from db.after_tests import after_tests_db
 from max.max_bot_after_tests.max_after_tests_keyboards.tests_keyboards import kb_go_to_main_menu
 from max.max_bot_after_tests.max_bot_after_tests_main_menu import after_tests_main_menu
+from max.max_bot_after_tests.max_util_handlers import get_video_attachments_by_name
 from resources import text_about_doctor
 from utils.after_tests_utils import write_and_sleep
 
@@ -25,12 +26,13 @@ async def handle_get_your_sex(event: MessageCallback):
 
 async def handle_get_doctor_info(event: MessageCallback):
     chat_id, user_id = event.get_ids()
-    with open(image_path, "rb") as image_file:
-        buffer = image_file.read()  # читаем весь файл в память
-        media = InputMediaBuffer(buffer=buffer, filename="TVH.jpg", type=UploadType.IMAGE)
+    photo = await get_video_attachments_by_name(video_name="photo_")
+    # with open(image_path, "rb") as image_file:
+    #     buffer = image_file.read()  # читаем весь файл в память
+    #     media = InputMediaBuffer(buffer=buffer, filename="TVH.jpg", type=UploadType.IMAGE)
 
-        await event.bot.send_message(
+    await event.bot.send_message(
             chat_id = chat_id,
             text= text_about_doctor,
-            attachments=[media, kb_go_to_main_menu()]
+            attachments=[photo]
             )

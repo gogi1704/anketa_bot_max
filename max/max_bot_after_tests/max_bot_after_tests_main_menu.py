@@ -198,56 +198,66 @@ async def handle_after_tests_main_menu(event:MessageCallback, sex, age):
             )
 
     elif data == "tests_main_menu_consult_med":
-
-        med_id = await db.get_med_id(user_id)
-
-        if med_id:
-
-            number = parse_int(med_id)
-            doc_url = await db.get_test_results(number)
-
-            if doc_url:
-                await send_manager_get_consult(event, med_id, user_id, sex, age)
-
-                await write_and_sleep(event=event,
-                                      chat_id=chat_id,
-                                      sleep_time=3)
-
-                # await after_tests_main_menu(event)
-
-            else:
-
-                await event.bot.send_message(
-                    user_id= user_id,
-                    text= resources.TEXT_NEW_MED_CONSULT_NO,
-                )
-                await db.add_pending_notification(
-                    med_id=int(med_id),
-                    telegram_id=user_id,
-                    chat_id=chat_id,
-                    kind="decode"
-                )
-
-                # await send_manager_get_consult(event, med_id, user_id, sex, age)
-
-                await write_and_sleep(event=event,
-                                      chat_id=chat_id,
-                                      sleep_time=3)
-
-                await after_tests_main_menu(event)
-
-
-        else:
-
-            await db.set_neuro_dialog_states(
-                user_id,
-                resources.dialog_states["get_med_id_consult"]
+        await write_and_sleep(event,chat_id,3)
+        await event.bot.send_message(
+            user_id= user_id,
+            text= resources.text_pay_to_consult,
+            attachments= [tests_keyboards.kb_pay_to_consult()]
             )
 
-            await event.bot.send_message(
-                user_id= user_id,
-                text=resources.TEXT_TESTS_GET_ID
-            )
+
+
+    # elif data == "tests_main_menu_consult_med":
+    #
+    #     med_id = await db.get_med_id(user_id)
+    #
+    #     if med_id:
+    #
+    #         number = parse_int(med_id)
+    #         doc_url = await db.get_test_results(number)
+    #
+    #         if doc_url:
+    #             await send_manager_get_consult(event, med_id, user_id, sex, age)
+    #
+    #             await write_and_sleep(event=event,
+    #                                   chat_id=chat_id,
+    #                                   sleep_time=3)
+    #
+    #             # await after_tests_main_menu(event)
+    #
+    #         else:
+    #
+    #             await event.bot.send_message(
+    #                 user_id= user_id,
+    #                 text= resources.TEXT_NEW_MED_CONSULT_NO,
+    #             )
+    #             await db.add_pending_notification(
+    #                 med_id=int(med_id),
+    #                 telegram_id=user_id,
+    #                 chat_id=chat_id,
+    #                 kind="decode"
+    #             )
+    #
+    #             # await send_manager_get_consult(event, med_id, user_id, sex, age)
+    #
+    #             await write_and_sleep(event=event,
+    #                                   chat_id=chat_id,
+    #                                   sleep_time=3)
+    #
+    #             await after_tests_main_menu(event)
+    #
+    #
+    #     else:
+    #
+    #         await db.set_neuro_dialog_states(
+    #             user_id,
+    #             resources.dialog_states["get_med_id_consult"]
+    #         )
+    #
+    #         await event.bot.send_message(
+    #             user_id= user_id,
+    #             text=resources.TEXT_TESTS_GET_ID
+    #         )
 
     elif data == "tests_main_menu_consult_neuro":
 

@@ -94,15 +94,6 @@ async def start(event: MessageCreated):
             manager_msg_id=resources.STATES_USERS_FINALS['start']
         )
 
-        # with open(image_path, "rb") as image_file:
-        #     buffer = image_file.read()  # читаем весь файл в память
-        #     media = InputMediaBuffer(buffer=buffer, filename="image_andrey.jpg", type= UploadType.IMAGE)
-        #
-        #     await event.message.answer(
-        #         text=resources.start_text,
-        #         attachments=[media]
-        #     )
-
         video_start = await get_video_attachments_by_name(video_name= "video_1")
         await event.message.answer(
             text=resources.start_text,
@@ -534,6 +525,8 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
     elif agent_answer == "complete":
         user_data = await anamnez_db.get_user(user_id=user_id)
         video_get_tests = await get_video_attachments_by_name(video_name= "video_2")
+        anketa = await anamnez_db.get_anketa(user_id=user_id)
+        anketa_text = "Ошибка получения анкеты" if anketa is None else f"Возраст: {anketa['age']}\nВес: {anketa['weight']}\nРост: {anketa['height']}\n"
         await event.message.answer(
             text=resources.recomend_video_text,
             attachments=[video_get_tests]
@@ -544,6 +537,7 @@ async def new_branch_dialog_another_problems(event: MessageCreated):
 
         text_to_manager = (
             f"Пользователь: {user_data['name']} (ID- {user_id}).\n"
+            f"{anketa_text}"
             f"Оставил жалобу:\n{dialog}"
             f"\n\n\n#Диалог_{user_id}"
         )

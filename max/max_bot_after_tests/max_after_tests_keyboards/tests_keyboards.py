@@ -8,7 +8,7 @@ def kb_tests_main_menu():
     builder.row(CallbackButton(text= "🧪 Сдать Анализы",payload= "tests_main_menu_make_tests"))
     builder.row(CallbackButton(text="🧪 Получить результаты анализов", payload="tests_main_menu_get_tests"))
     builder.row(CallbackButton(text="📊 Расшифровка показателей", payload="tests_main_menu_get_decode"))
-    builder.row(CallbackButton(text="🩺 Консультация по результатам анализов", payload="tests_main_menu_consult_med"))
+    builder.row(CallbackButton(text="🩺 Консультация врача", payload="tests_main_menu_consult_med"))
     builder.row(CallbackButton(text="🤖 Поддержка Филипп Филипповича", payload="tests_main_menu_consult_neuro"))
     builder.row(CallbackButton(text="💰 Платные услуги", payload="pay_price"))
     builder.row(CallbackButton(text="Ваш врач", payload="doctor_info"))
@@ -103,5 +103,11 @@ def kb_pay_price():
 def kb_yookassa(url:str):
     builder = InlineKeyboardBuilder()
     builder.row(LinkButton(text="Оплатить",  url= url))
+    builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
+    return builder.as_markup()
+
+def kb_pay_to_consult():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text="💰 Платные услуги", payload="pay_price"))
     builder.row(CallbackButton(text="Главное меню", payload="go_to_main_menu"))
     return builder.as_markup()

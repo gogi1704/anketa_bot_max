@@ -14,7 +14,8 @@ from maxapi.types import (
     Command, BotCommand, )
 from max.max_bot_after_tests.max_util_handlers import get_statistic_by_inn, get_statistic_inn_by_date, \
     get_dop_tests_statistic, handle_send_post_with_bt, handle_send_post_without_bt, get_price, make_pay_50, \
-    get_manager_d, upload_videos, get_dop_tests_all_and_print_to_console, dop_with_med_id
+    get_manager_d, upload_videos, get_dop_tests_all_and_print_to_console, dop_with_med_id, \
+    build_users_analytics_need_and_real, upload_photo
 from max.max_bot_after_tests.max_text_hanlers import handle_text_message_after_tests
 from max.max_bot_anamnez.max_bot_navigation import *
 from ai_agents.open_ai_main import get_gpt_answer
@@ -174,6 +175,7 @@ async def get_manager_d_handler(event: MessageCreated):
 @dp.message_created(Command("upload_videos"))
 async def upload_videos_command(event: MessageCreated):
     await upload_videos(event)
+    await upload_photo(event)
 
 @dp.message_created(Command("clear_and_restart"))
 async def clear_handler(event: MessageCreated):
@@ -194,6 +196,10 @@ async def get_dop_tests_stat(event: MessageCreated):
 @dp.message_created(Command("get_dop_tests_all"))
 async def get_dop_tests_stat_all_and_print(event: MessageCreated):
     await get_dop_tests_all_and_print_to_console(event)
+
+@dp.message_created(Command("stat_need_and_real"))
+async def stat_need_and_real(event: MessageCreated):
+    await build_users_analytics_need_and_real(event)
 
 @dp.message_created(Command("dop_with_med_id"))
 async def get_dop_tests_stat_dop_with_med_id(event: MessageCreated):

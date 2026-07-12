@@ -4,6 +4,7 @@ from maxapi.enums.upload_type import UploadType
 from maxapi.types import InputMediaBuffer
 from maxapi.types.attachments import Attachments
 
+import doc_funs
 import resources
 from api.api_funs import create_yookassa_payment
 from db.after_tests import after_tests_db as db
@@ -17,6 +18,8 @@ video_paths = [Path(__file__).parent.parent.parent / "images" / "video_1.mp4",
                Path(__file__).parent.parent.parent / "images" / "video_3.mp4",
                Path(__file__).parent.parent.parent / "images" / "video_4.mp4"
                ]
+
+photo_path = Path(__file__).parent.parent.parent / "images" / "TVH.jpg"
 
 async def get_statistic_by_inn(event: MessageCreated):
     chat_id, user_id = event.get_ids()
@@ -146,9 +149,24 @@ async def upload_video(event: MessageCreated, video_file_path, video_count):
         att = res.message.body.attachments[0] if res.message.body.attachments else None
         await anamnez_db.add_upload_token(upload_name= f"video_{video_count}", upload_token= att.model_dump_json())
 
+async def upload_photo(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+    with open(photo_path, "rb") as photo_file:
+        buffer = photo_file.read()  # читаем весь файл в память
+        media = InputMediaBuffer(buffer=buffer, filename= f"photo_", type=UploadType.IMAGE)
+
+        res = await event.bot.send_message(
+            chat_id = chat_id,
+            text= f"photo_",
+            attachments=[media]
+            )
+        # print(res)
+
+        att = res.message.body.attachments[0] if res.message.body.attachments else None
+        await anamnez_db.add_upload_token(upload_name= f"photo_", upload_token= att.model_dump_json())
+
 
 async def upload_videos(event: MessageCreated):
-    chat_id, user_id = event.get_ids()
     video_count = 1
     for path in video_paths:
         await upload_video(event, path, video_count)
@@ -175,3 +193,19 @@ async def get_video_attachments_by_name(video_name):
             att_json
         )
     return attachment
+
+
+async def build_users_analytics_need_and_real(event: MessageCreated):
+    chat_id, user_id = event.get_ids()
+
+    max_ids, dop_tests, med_ids, result = await doc_funs.build_users_analytics_need_and_real()
+    text = f"""Всего юзеров с chel_id: {len(max_ids)}
+Всего юзеров выбрали допы : {len(dop_tests)}
+Всего юзеров выбрали и получили результаты в боте : {len(med_ids)}
+"""
+    print(result)
+
+    await event.bot.send_message(
+        chat_id=chat_id,
+        text=  text
+    )
